@@ -54,11 +54,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace Assimp;
 
-#if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER)
+#if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER) /* TODO: more sense here... */
 #	define snprintf _snprintf
 #	define vsnprintf _vsnprintf
 #	define strcasecmp _stricmp
 #	define strncasecmp _strnicmp
+/*
+ Windows: stricmp()
+         warning: implicit declaration of function ‘_stricmp’
+*/
+#       define _strnicmp stricmp
+/*
+ Borland: strcmpi()
+*/
+int strcasecmp(const char *s1, const char *s2){
+	while(*s1 != 0 && tolower(*s1) == tolower(*s2)){
+		++s1;
+		++s2;
+	}
+	return (*s2 == 0) ? (*s1 != 0) : (*s1 == 0) ? -1 : (tolower(*s1) - tolower(*s2));
+}
 #endif
 
 static const aiImporterDesc desc = {
@@ -66,7 +81,7 @@ static const aiImporterDesc desc = {
 	"",
 	"",
 	"",
-	aiImporterFlags_SupportBinaryFlavour,
+	aiImporterFlags_SupportTextFlavour | aiImporterFlags_LimitedSupport | aiImporterFlags_Experimental,
 	0,
 	0,
 	0,
