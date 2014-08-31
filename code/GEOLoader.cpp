@@ -111,7 +111,7 @@ bool GEOImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bool 
 	{
 		if (!pIOHandler)return true;
 		const char* tokens[] = {"gour", "3dg"}; /* ref: 3dg1 3dg2 3dg3 gour */
-		return SearchFileHeaderForToken(pIOHandler, pFile, tokens, sizeof(tokens));
+		return SearchFileHeaderForToken(pIOHandler, pFile, tokens, 2);
 	}
 	return false;
 }
