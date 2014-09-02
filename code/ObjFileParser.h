@@ -105,6 +105,8 @@ private:
 	void getGroupNumber();
 	/// Gets the group number and resolution from file.
 	void getGroupNumberAndResolution();
+        /// reselet the group so we can modify it, like set material in a later step.
+	void reselectGroup();
 	/// Returns the index of the material. Is -1 if not material was found.
 	int getMaterialIndex( const std::string &strMaterialName );
 	/// Parse object name
@@ -127,6 +129,8 @@ private:
 	DataArrayIt m_DataItEnd;
 	//!	Pointer to model instance
 	ObjFile::Model *m_pModel;
+        /// post select mode
+	bool m_ReselectMode;
 	//!	Current line (for debugging)
 	unsigned int m_uiLine;
 	//!	Helper buffer
