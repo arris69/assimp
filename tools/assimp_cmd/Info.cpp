@@ -228,6 +228,13 @@ int Assimp_Info (const char* const* params, unsigned int num)
 
 	const std::string in  = std::string(params[0]);
 
+	Assimp::Logger::LogSeverity severity = Assimp::Logger::VERBOSE;
+	Assimp::DefaultLogger::create("", severity, aiDefaultLogStream_STDOUT);
+
+	aiString s;
+	globalImporter->GetExtensionList(s);
+	printf("assimp info: %s\n", s.C_Str());
+
 	// do maximum post-processing unless -r was specified
 	ImportData import;
 	import.ppFlags = num>1&&(!strcmp(params[1],"--raw")||!strcmp(params[1],"-r")) ? 0
