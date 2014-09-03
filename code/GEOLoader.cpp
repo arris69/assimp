@@ -110,14 +110,15 @@ GEOImporter::~GEOImporter() {
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
 	if (rgbH) {
-		long color = iColorIndex;
-		cOut[0] = ((color & 0x00ff0000) >> 16) / 255.0f;
-		cOut[1] = ((color & 0x0000ff00) >> 8) / 255.0f;
-		cOut[2] = (color & 0x000000ff) / 255.0f;
-		cOut[3] = 1.0f;
+        cOut[0] = ((iColorIndex & 0x00ff0000) >> 16) / 255.0f;
+        cOut[1] = ((iColorIndex & 0x0000ff00) >> 8) / 255.0f;
+        cOut[2] = (iColorIndex & 0x000000ff) / 255.0f;
+        cOut[3] = 1.0f;
+        DefaultLogger::get()->debug((Formatter::format(), "derived from HexColor: ", iColorIndex, ", r ",cOut[0]," g ",&cOut.g," b ",&cOut.b," a ",cOut[3]));
 	} else {
 		int index = (iColorIndex & 0x0f);
-		cOut = *((const aiColor4D*) (&g_ColorTable[index]));
+		//cOut = *((const aiColor4D*) (&g_ColorTable[index]));
+		cOut = *(&g_ColorTable[index]);
 	}
 }
 
@@ -159,7 +160,6 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 	std::vector<char> mBuffer2;
 	TextFileToBuffer(file.get(), mBuffer2);
 	const char* buffer = &mBuffer2[0];
-	Flavor flavor;
 
 	char line[4096];
 	GetNextLine(buffer, line);
@@ -167,19 +167,19 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		if ('G' == line[0] || 'D' == line[1])
 			switch (line[3]) {
 			case '1':
-				//flavor = 1;
+				flav = Mesh_with_coloured_faces;
 				DefaultLogger::get()->debug(
 						(Formatter::format(), "Signature: ", line, ", must read color with face data"));
 				break;
 			case '2':
-				//flavor = 3;
+				flav = Lamp;
 			case '3':
-				//flavor = (flavor) ? flavor : 4;
+				flav = (flav) ? flav : Gouraud_curves_or_NURBS_surfaces;
 				DefaultLogger::get()->debug(
 						(Formatter::format(), "Signature: ", line, ", must not read any color data"));
 				break;
 			case 'R':
-				//flavor = 2;
+				flav = Mesh_with_coloured_vertices;
 				DefaultLogger::get()->debug(
 						(Formatter::format(), "Signature: ", line, ", must read color with vertex data"));
 				break;
@@ -220,6 +220,23 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		sz = fast_atoreal_move<float>(sz, (float&) v.y);
 		SkipSpaces(&sz);
 		fast_atoreal_move<float>(sz, (float&) v.z);
+
+		if(flav == Mesh_with_coloured_vertices){
+			SkipSpaces(&sz);
+					if (!(color = strtoul10(sz, &sz)))
+						if (!(color = hexstrtoul10(--sz, &sz))) {
+							DefaultLogger::get()->error(
+									(Formatter::format(), "GEO: color read failed (sz) ", sz, " color ", color));
+							continue;
+						} else {
+							rgbH = true;
+						}
+					else
+						rgbH = false;
+
+					aiColor4D& col = mesh->mColors[0][faces->mIndices[i]];
+								LookupColor(color, col);
+		}
 	}
 
 	// First find out how many vertices we'll need
@@ -272,7 +289,7 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		}
 		SkipSpaces(&sz);
 		if (!(color = strtoul10(sz, &sz)))
-			if (!(color = boost::lexical_cast<long>(sz--))) {
+			if (!(color = hexstrtoul10(--sz, &sz))) {
 				DefaultLogger::get()->error(
 						(Formatter::format(), "GEO: color read failed (sz) ", sz, " color ", color));
 				continue;
@@ -282,6 +299,7 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		else
 			rgbH = false;
 
+		if(flav == Mesh_with_coloured_faces)
 		for (int l = 0; l < faces->mNumIndices; l++) {
 			aiColor4D& col = mesh->mColors[0][faces->mIndices[l]];
 
