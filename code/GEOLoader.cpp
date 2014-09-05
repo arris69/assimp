@@ -67,11 +67,11 @@ using namespace Assimp;
 //#	define vsnprintf _vsnprintf
 //#	define strcasecmp _stricmp
 //#	define strncasecmp _strnicmp
-#define strcasestr _stricmp
 /*
  Windows: stricmp()
  warning: implicit declaration of function ‘_stricmp’
  */
+#       define strcasestr _stricmp
 /*
  Borland: strcmpi()
  */
@@ -93,7 +93,7 @@ static const aiImporterDesc desc = {
 				calculation http://home.comcast.net/~erniew/lwsdk/sample/vidscape/surf.c",
 				aiImporterFlags_SupportTextFlavour | aiImporterFlags_LimitedSupport | aiImporterFlags_Experimental,
 				0, 0, 0, 0,
-				"3DG GEO GOUR" /* parsing test */
+				"3DG geo GOUR" /* parsing test */
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -119,9 +119,9 @@ void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
 		int index = (iColorIndex & 0x0f);
 		//cOut = *((const aiColor4D*) (&g_ColorTable[index]));
 		cOut = *(&g_ColorTable[index]);
-			DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
-		if((iColorIndex & 0xf0))
-			DefaultLogger::get()->debug((Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+		DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+	if((iColorIndex & 0xf0))
+		DefaultLogger::get()->debug((Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
 	}
 }
 
