@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file  OFFLoader.cpp
  *  @brief Implementation of the OFF importer class 
  */
-
+ 
 #include "AssimpPCH.h"
 #ifndef ASSIMP_BUILD_NO_OFF_IMPORTER
 

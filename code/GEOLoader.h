@@ -90,6 +90,7 @@ private:
 		Lamp,
 		Gouraud_curves_or_NURBS_surfaces
 	};
+	Flavor flav;
 	bool rgbH;
 };
 
