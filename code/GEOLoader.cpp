@@ -303,7 +303,7 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 			rgbH = false;
 
 		if(flav == Mesh_with_coloured_faces)
-		for (int l = 0; l < faces->mNumIndices; l++) {
+		for (unsigned int l = 0; l < faces->mNumIndices; l++) {
 			aiColor4D& col = mesh->mColors[0][faces->mIndices[l]];
 
 			LookupColor(color, col);
