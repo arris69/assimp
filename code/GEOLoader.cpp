@@ -63,15 +63,15 @@ using namespace Assimp;
 #endif
 
 #if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER) /* TODO: more sense here... */
-#	define snprintf _snprintf
-#	define vsnprintf _vsnprintf
-#	define strcasecmp _stricmp
-#	define strncasecmp _strnicmp
+//#	define snprintf _snprintf
+//#	define vsnprintf _vsnprintf
+//#	define strcasecmp _stricmp
+//#	define strncasecmp _strnicmp
+#define strcasestr _stricmp
 /*
  Windows: stricmp()
  warning: implicit declaration of function ‘_stricmp’
  */
-#       define _strnicmp stricmp
 /*
  Borland: strcmpi()
  */
@@ -117,8 +117,11 @@ void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
         DefaultLogger::get()->debug((Formatter::format(), "derived from HexColor: ", iColorIndex, ", r ",cOut[0]," g ",&cOut.g," b ",&cOut.b," a ",cOut[3]));
 	} else {
 		int index = (iColorIndex & 0x0f);
-		//cOut = *((const aiColor4D*) (&g_ColorTable[index]));
-		cOut = *(&g_ColorTable[index]);
+		cOut = *((const aiColor4D*) (&g_ColorTable[index]));
+		//cOut = *(&g_ColorTable[index]);
+			DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+		if((iColorIndex & 0xf0))
+			DefaultLogger::get()->debug((Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
 	}
 }
 
