@@ -8,6 +8,10 @@
 #ifndef GEOCOLORTABLE_H_
 #define GEOCOLORTABLE_H_
 
+char *g_Effect[4] = {
+                "Matte", "Glossy", "Luminous", "Outline"
+};
+
 aiColor4D g_ColorTable[21] = {
 		{ 0.000000f, 0.000000f, 0.000000f, 1.0f }, //   0,   0,   0  0
 		{ 0.000000f, 0.313726f, 0.627451f, 1.0f }, //   0,  80, 160
