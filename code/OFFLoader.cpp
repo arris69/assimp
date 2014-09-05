@@ -119,7 +119,7 @@ void OFFImporter::InternReadFile( const std::string& pFile,
 
 	char line[4096];
 	GetNextLine(buffer,line);
-	if ('O' == line[0] || '#' == line[0]) {
+	while ('O' == line[0] || '#' == line[0]) {
 		GetNextLine(buffer,line); // skip the 'OFF' line  and comment lines (#...)
 	}
 
@@ -215,12 +215,14 @@ void OFFImporter::InternReadFile( const std::string& pFile,
 	aiMaterial* pcMat = new aiMaterial();
 
 	aiColor4D clr(0.6f,0.6f,0.6f,1.0f);
+	const aiString tmpMatName(AI_DEFAULT_MATERIAL_NAME);
+	pcMat->AddProperty(&tmpMatName, AI_MATKEY_NAME);
 	pcMat->AddProperty(&clr,1,AI_MATKEY_COLOR_DIFFUSE);
 	pScene->mMaterials[0] = pcMat;
 
 	const int twosided =1;
 	pcMat->AddProperty(&twosided,1,AI_MATKEY_TWOSIDED);
-#endif
+#endif	
 }
 
 #endif // !! ASSIMP_BUILD_NO_OFF_IMPORTER
