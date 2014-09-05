@@ -63,15 +63,15 @@ using namespace Assimp;
 #endif
 
 #if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER) /* TODO: more sense here... */
-#	define snprintf _snprintf
-#	define vsnprintf _vsnprintf
-#	define strcasecmp _stricmp
-#	define strncasecmp _strnicmp
+//#	define snprintf _snprintf
+//#	define vsnprintf _vsnprintf
+//#	define strcasecmp _stricmp
+//#	define strncasecmp _strnicmp
+#define strcasestr _stricmp
 /*
  Windows: stricmp()
  warning: implicit declaration of function ‘_stricmp’
- */
-#       define _strnicmp stricmp
+ */      
 /*
  Borland: strcmpi()
  */
@@ -300,7 +300,7 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 			rgbH = false;
 
 		if(flav == Mesh_with_coloured_faces)
-		for (int l = 0; l < faces->mNumIndices; l++) {
+		for (unsigned int l = 0; l < faces->mNumIndices; l++) {
 			aiColor4D& col = mesh->mColors[0][faces->mIndices[l]];
 
 			LookupColor(color, col);

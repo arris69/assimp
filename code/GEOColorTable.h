@@ -8,7 +8,7 @@
 #ifndef GEOCOLORTABLE_H_
 #define GEOCOLORTABLE_H_
 
-aiColor4D g_ColorTable[21]{
+aiColor4D g_ColorTable[21] = {
 		{ 0.000000f, 0.000000f, 0.000000f, 1.0f }, //   0,   0,   0  0
 		{ 0.000000f, 0.313726f, 0.627451f, 1.0f }, //   0,  80, 160
 		{ 0.000000f, 0.549020f, 0.000000f, 1.0f }, //   0, 140,   0
