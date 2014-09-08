@@ -44,15 +44,13 @@ const double fast_atof_table[16] =	{  // we write [16] here instead of [] to wor
 
 #include <errno.h>
 // VisualStudio 2012...
-#ifndef strtoull
+#if _MSC_BUILD
 # define strtoull _strtoui64
 #endif
-//#ifdef WIN32
-    #ifndef NAN
-        static const unsigned long __nan[2] = {0xffffffff, 0x7fffffff};
-        #define NAN (*(const float *) __nan)
-    #endif
-//#endif
+#ifndef NAN
+	static const unsigned long __nan[2] = {0xffffffff, 0x7fffffff};
+#	define NAN (*(const float *) __nan)
+#endif
 inline unsigned int hexstrtoul10(const char* in, const char** out = 0) {
 	/* http://stackoverflow.com/questions/4132318/how-to-convert-hex-string-to-unsigned-64bit-uint64-t-integer-in-a-fast-and-saf answer 3. */
 	//char *in, *end;
