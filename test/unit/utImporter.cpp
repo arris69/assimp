@@ -122,8 +122,7 @@ TEST_F(ImporterTest, testMemoryRead)
 	ASSERT_TRUE(sc != NULL);
 	EXPECT_EQ(aiString("<3DSRoot>"), sc->mRootNode->mName);
 	EXPECT_EQ(1U, sc->mNumMeshes);
-	printf("Pre Check %s %d: sc->mNumMeshes %d sc->mMeshes[0]->mNumVertices %d sc->mMeshes[0]->mNumFaces %d\n", __FILE__, __LINE__, sc->mNumMeshes, sc->mMeshes[0]->mNumVertices, sc->mMeshes[0]->mNumFaces);
-	EXPECT_LT(24U, sc->mMeshes[0]->mNumVertices);
+	EXPECT_NEAR(24U, sc->mMeshes[0]->mNumVertices, 2);
 	EXPECT_EQ(12U, sc->mMeshes[0]->mNumFaces);
 }
 
