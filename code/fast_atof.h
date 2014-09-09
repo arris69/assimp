@@ -226,7 +226,7 @@ inline uint64_t strtoul10_64( const char* in, const char** out=0, unsigned int* 
 		const uint64_t new_value = ( value * 10 ) + ( *in - '0' );
 		
 		if (new_value < value) /* numeric overflow, we rely on you */
-			throw std::overflow_error(std::string("Converting the string \"") + in + "\" into a value resulted in overflow.");
+			return value;
 
 		value = new_value;
 
