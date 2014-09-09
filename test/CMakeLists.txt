@@ -11,6 +11,7 @@ SOURCE_GROUP( unit FILES
 	unit/CCompilerTest.c
 )
 SET( TEST_SRCS
+	unit/utFastAtof.cpp
 	unit/utFindDegenerates.cpp
 	unit/utFindInvalidData.cpp
 	unit/utFixInfacingNormals.cpp
