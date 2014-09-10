@@ -6,7 +6,7 @@ namespace {
 
 template <typename Real>
 bool IsNan(Real x) {
-	return x != x;
+	return (x == NAN);
 }
 
 template <typename Real>
