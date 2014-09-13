@@ -43,7 +43,7 @@ const double fast_atof_table[16] =	{  // we write [16] here instead of [] to wor
 };
 
 #if _MSC_VER
-#	define strtoull strtoui64
+#	define strtoull _strtoui64
 #endif
 
 #include <errno.h>
