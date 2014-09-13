@@ -67,11 +67,11 @@ using namespace Assimp;
 //#	define vsnprintf _vsnprintf
 //#	define strcasecmp _stricmp
 //#	define strncasecmp _strnicmp
-#define strcasestr _stricmp
 /*
  Windows: stricmp()
  warning: implicit declaration of function ‘_stricmp’
  */
+#       define strcasestr _stricmp
 /*
  Borland: strcmpi()
  */
@@ -93,13 +93,14 @@ static const aiImporterDesc desc = {
 				calculation http://home.comcast.net/~erniew/lwsdk/sample/vidscape/surf.c",
 				aiImporterFlags_SupportTextFlavour | aiImporterFlags_LimitedSupport | aiImporterFlags_Experimental,
 				0, 0, 0, 0,
-				"3DG GEO GOUR" /* parsing test */
+				"3DG geo GOUR" /* parsing test */
 };
 
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 GEOImporter::GEOImporter() :
-		rgbH(false) {
+		rgbH(false),
+		pScene(0){
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -119,9 +120,9 @@ void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
 		int index = (iColorIndex & 0x0f);
 		//cOut = *((const aiColor4D*) (&g_ColorTable[index]));
 		cOut = *(&g_ColorTable[index]);
-			DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
-		if((iColorIndex & 0xf0))
-			DefaultLogger::get()->debug((Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+		DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+	if((iColorIndex & 0xf0))
+		DefaultLogger::get()->debug((Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
 	}
 }
 
@@ -159,6 +160,12 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		throw DeadlyImportError("Failed to open GEO file " + pFile + ".");
 	}
 
+	this->pScene = pScene;
+	/*std::vector<char> buffer;
+	TextFileToBuffer( file, buffer );
+	GEOParser myParser( buffer );
+	myParser.parse();*/
+
 	// allocate storage and copy the contents of the file to a memory buffer
 	std::vector<char> mBuffer2;
 	TextFileToBuffer(file.get(), mBuffer2);
@@ -179,7 +186,7 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 			case '3':
 				flav = (flav) ? flav : Gouraud_curves_or_NURBS_surfaces;
 				DefaultLogger::get()->debug(
-						(Formatter::format(), "Signature: ", line, ", must not read any color data"));
+						(Formatter::format(), "Signature: ", line, ", must not read any color data, but lights or courves"));
 				break;
 			case 'R':
 				flav = Mesh_with_coloured_vertices;
@@ -196,6 +203,22 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 
 	const char* sz = line;
 	SkipSpaces(&sz);
+
+	if(flav == Mesh_with_coloured_faces)
+		GEOImporter::InternReadncV(strtoul10(sz, &sz));
+	else if(flav == Lamp)
+		GEOImporter::InternReadLamp(strtoul10(sz, &sz));
+	else if(flav == Gouraud_curves_or_NURBS_surfaces)
+		GEOImporter::InternReadFbS(strtoul10(sz, &sz));
+	else if(flav == Mesh_with_coloured_vertices)
+		GEOImporter::InternReadcV(strtoul10(sz, &sz));
+	else
+		throw DeadlyImportError("GEO: Never see me, bug in design.");
+
+	// import faces:
+	////GEOImporter::InternReadcF(strtoul10(sz, &sz)); // mesh colored faces
+	////GEOImporter::InternReadncF(strtoul10(sz, &sz)); // mesh colored vertices
+
 	const unsigned int numVertices = strtoul10(sz, &sz);
 	SkipSpaces(&sz);
 	const unsigned int numFaces = 42750 /*strtoul10(sz,&sz)*/;
@@ -203,6 +226,8 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 
 	pScene->mMeshes = new aiMesh*[pScene->mNumMeshes = 1];
 	aiMesh* mesh = pScene->mMeshes[0] = new aiMesh();
+
+
 	aiFace* faces = mesh->mFaces = new aiFace[numFaces];
 
 	std::vector<aiVector3D> tempPositions(numVertices);
@@ -312,7 +337,65 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		++i;
 		++faces;
 	}
+	InternReadFinish();
+}
+void GEOImporter::InternReadcF(int count){
+	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " colored face(s)"));
 
+}
+void GEOImporter::InternReadncF(int count){
+	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " not colored face(s)"));
+
+}
+void GEOImporter::InternReadLamp(int count){
+	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " light(s)"));
+
+	pScene->mNumLights = count;
+	pScene->mLights = new aiLight*[count];
+
+	for(int i = 0; i < count; i++){
+		DefaultLogger::get()->debug((Formatter::format(), "GEO: Read light Nr.: ", i));
+		aiLight *tmpLight = new aiLight();
+
+		/*if(i == 0)
+		tmpLight->mName = pScene->mRootNode->mName;
+		else
+			tmpLight->mName = "dunno";
+
+		//type               - lamp type (0 - point lamp, 1 - spot lamp, 2 - sun)
+		tmpLight->mType = aiLightSource_DIRECTIONAL;
+
+		//spotsize spotblend - size of spot beam in degrees and intensity (length) of beam
+		// hm, calculate mAngleInnerCone mAngleOuterCone
+
+		//R G B E            - color (RGB) and (E)nergy of lamp
+		// same as diffuse? tmpLight->mColorAmbient = new aiColor3D(1);
+		tmpLight->mColorDiffuse = new aiColor3D(1, 1, 1);
+		tmpLight->mColorSpecular = new aiColor3D(1, 1, 1);
+
+		//x y z              - lamp coordinates
+		tmpLight->mPosition = new aiVector3D(1, 1, 1);
+
+		//vecx vecy vecz     - lamp direction vector
+		tmpLight->mDirection = new aiVector3d(1, 1, 1);
+*/
+		// new tmp light set values then push to szene?
+		pScene->mLights[i] = tmpLight;
+	}
+}
+void GEOImporter::InternReadFbS(int count){
+	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " form(s)"));
+	throw DeadlyImportError("GEO: not supported yet.");
+}
+void GEOImporter::InternReadcV(int count){
+	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " colored vertex/vertices"));
+
+}
+void GEOImporter::InternReadncV(int count){
+	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " not colored vertex/vertices"));
+
+}
+void GEOImporter::InternReadFinish(){
 	// generate the output node graph
 	pScene->mRootNode = new aiNode();
 	pScene->mRootNode->mName.Set("<GEORoot>");

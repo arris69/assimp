@@ -44,6 +44,10 @@ const double fast_atof_table[16] =	{  // we write [16] here instead of [] to wor
 
 #if _MSC_VER
 #	define strtoull _strtoui64
+#	ifndef NAN
+    	static const unsigned long __nan[2] = {0xffffffff, 0x7fffffff};
+#		define NAN (*(const float *) __nan)
+#	endif
 #endif
 
 #include <errno.h>
@@ -277,9 +281,6 @@ inline const char* fast_atoreal_move( const char* c, Real& out, bool check_comma
 	if ((c[0] == 'I' || c[0] == 'i') && ASSIMP_strincmp(c, "inf", 3) == 0)
 	{
 		out = std::numeric_limits<Real>::infinity();
-		if (inv) {
-			out = -out;
-		}
 		c += 3;
 		if ((c[0] == 'I' || c[0] == 'i') && ASSIMP_strincmp(c, "inity", 5) == 0)
 		{
