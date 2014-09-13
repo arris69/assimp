@@ -42,6 +42,10 @@ const double fast_atof_table[16] =	{  // we write [16] here instead of [] to wor
 	0.000000000000001
 };
 
+#if _MSC_VER
+#	define strtoull strtoui64
+#endif
+
 #include <errno.h>
 inline unsigned int hexstrtoul10(const char* in, const char** out = 0) {
 	/* http://stackoverflow.com/questions/4132318/how-to-convert-hex-string-to-unsigned-64bit-uint64-t-integer-in-a-fast-and-saf answer 3. */
