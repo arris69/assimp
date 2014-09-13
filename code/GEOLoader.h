@@ -81,6 +81,13 @@ protected:
 	 */
 	void InternReadFile(const std::string& pFile, aiScene* pScene,
 			IOSystem* pIOHandler);
+	void InternReadcF(int count);
+	void InternReadncF(int count);
+	void InternReadLamp(int count);
+	void InternReadFbS(int count);
+	void InternReadcV(int count);
+	void InternReadncV(int count);
+	void InternReadFinish();
 	void LookupColor(long index, aiColor4D& cOut);
 
 private:
@@ -92,6 +99,7 @@ private:
 	};
 	Flavor flav;
 	bool rgbH;
+	aiScene* pScene;
 };
 
 } // end of namespace Assimp
