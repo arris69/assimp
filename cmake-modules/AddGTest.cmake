@@ -30,12 +30,13 @@ endif()
 
 set(GTEST_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/gtest")
 
+set(gtest_SOURCE_DIR "${PROJECT_SOURCE_DIR}/contrib/googletest")
 ExternalProject_Add(gtest
-	GIT_REPOSITORY https://chromium.googlesource.com/external/googletest
-	TIMEOUT 10
+	DOWNLOAD_COMMAND ""
+	UPDATE_COMMAND ""
+	SOURCE_DIR ${gtest_SOURCE_DIR}
 	PREFIX "${GTEST_PREFIX}"
 	CMAKE_ARGS "${GTEST_CMAKE_ARGS}"
-	LOG_DOWNLOAD ON
 	LOG_CONFIGURE ON
 	LOG_BUILD ON
 	# Disable install
