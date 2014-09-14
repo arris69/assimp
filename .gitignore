@@ -6,6 +6,9 @@ build
 *.sln
 *.ncb
 *.vcproj
+Debug/
+Release/
+_.*
 
 # Output
 bin/
@@ -32,8 +35,10 @@ test/results
 
 # Python
 __pycache__
+*.pyc
 
 # brain 1.0
 *~
 obj/
 libs/
+Info.cpp
