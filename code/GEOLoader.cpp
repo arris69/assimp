@@ -100,7 +100,7 @@ static const aiImporterDesc desc = {
 // Constructor to be privately used by Importer
 GEOImporter::GEOImporter() :
 		rgbH(false),
-		pScene(0){
+		pScene(0), tempPositions(0){
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -111,19 +111,55 @@ GEOImporter::~GEOImporter() {
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
 	if (rgbH) {
-        cOut[0] = ((iColorIndex & 0x00ff0000) >> 16) / 255.0f;
-        cOut[1] = ((iColorIndex & 0x0000ff00) >> 8) / 255.0f;
-        cOut[2] = (iColorIndex & 0x000000ff) / 255.0f;
-        cOut[3] = 1.0f;
-        DefaultLogger::get()->debug((Formatter::format(), "derived from HexColor: ", iColorIndex, ", r ",cOut[0]," g ",&cOut.g," b ",&cOut.b," a ",cOut[3]));
+		cOut[0] = ((iColorIndex & 0x00ff0000) >> 16) / 255.0f;
+		cOut[1] = ((iColorIndex & 0x0000ff00) >> 8) / 255.0f;
+		cOut[2] = (iColorIndex & 0x000000ff) / 255.0f;
+		cOut[3] = 1.0f;
+		//DefaultLogger::get()->debug((Formatter::format(), "derived from HexColor: ", iColorIndex, ", r ",cOut[0]," g ",&cOut.g," b ",&cOut.b," a ",cOut[3]));
 	} else {
 		int index = (iColorIndex & 0x0f);
 		cOut = *((const aiColor4D*) (&g_ColorTable[index]));
 		//cOut = *(&g_ColorTable[index]);
-		DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
-	if((iColorIndex & 0xf0))
-		DefaultLogger::get()->debug((Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+		//DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+		if ((iColorIndex & 0xf0)) {
+			DefaultLogger::get()->debug(
+					(Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex
+							& 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+
+			aiMaterial* pcMat = new aiMaterial();
+			//pScene->mNumMaterials++;
+
+			/*if (!pScene->mNumMaterials)
+				pScene->mMaterials = new aiMaterial*[255];
+*/
+
+				DefaultLogger::get()->debug("GEO: Material stuff");
+			/*	//pScene->mMaterials = new aiMaterial*[pScene->mNumMaterials];
+			//pScene->mMaterials = (aiMaterial **)realloc(pScene->mMaterials, sizeof(aiMaterial*) * pScene->mNumMaterials);
+
+			//int x[3] = {1, 2, 3};
+			std::vector<aiMaterial*> v(pScene->mMaterials, pScene->mMaterials + ARRAYSIZE(pScene->mMaterials));
+			v.push_back(pcMat);
+*/
+			/*char name[16];
+			sprintf(name, "%08X", (int)iColorIndex);
+			aiString tmpMatName;
+			tmpMatName.Set(name);
+			pcMat->AddProperty(&tmpMatName, AI_MATKEY_NAME);
+			pcMat->AddProperty(&cOut, 1, AI_MATKEY_COLOR_DIFFUSE);
+			pScene->mMaterials[pScene->mNumMaterials] = pcMat;
+
+			const int twosided = 1;
+			pcMat->AddProperty(&twosided, 1, AI_MATKEY_TWOSIDED);
+
+			pScene->mNumMaterials++;*/
+		}
 	}
+
+	//pScene->mNumMeshes++;
+	//pScene->mMeshes = (aiMesh **)realloc(&pScene->mMeshes, sizeof(aiMesh*) * pScene->mNumMeshes);
+	//	/*aiMesh* mesh =*/ pScene->mMeshes[pScene->mNumMeshes - 1] = new aiMesh();
+	// mwsh->mMaterialIndex = thismatindex;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -169,9 +205,8 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 	// allocate storage and copy the contents of the file to a memory buffer
 	std::vector<char> mBuffer2;
 	TextFileToBuffer(file.get(), mBuffer2);
-	const char* buffer = &mBuffer2[0];
+	buffer = &mBuffer2[0];
 
-	char line[4096];
 	GetNextLine(buffer, line);
 	while ('G' == line[0] || 'D' == line[1] || '#' == line[0]) {
 		if ('G' == line[0] || 'D' == line[1])
@@ -201,72 +236,35 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		GetNextLine(buffer, line); // skip the signature line and comment lines (#...)
 	}
 
-	const char* sz = line;
+	sz = line;
 	SkipSpaces(&sz);
+const unsigned int numElementsToImport = strtoul10(sz, &sz);
+
+	const unsigned int numFaces = 42750;
+
+	pScene->mMeshes = new aiMesh*[pScene->mNumMeshes = 1];
+	mesh = pScene->mMeshes[0] = new aiMesh();
+	faces = mesh->mFaces = new aiFace[numFaces];
+
+	tempPositions.resize(numElementsToImport);
 
 	if(flav == Mesh_with_coloured_faces)
-		GEOImporter::InternReadncV(strtoul10(sz, &sz));
+		GEOImporter::InternReadncV(numElementsToImport);
 	else if(flav == Lamp)
-		GEOImporter::InternReadLamp(strtoul10(sz, &sz));
+		GEOImporter::InternReadLamp(numElementsToImport);
 	else if(flav == Gouraud_curves_or_NURBS_surfaces)
-		GEOImporter::InternReadFbS(strtoul10(sz, &sz));
+		GEOImporter::InternReadFbS(numElementsToImport);
 	else if(flav == Mesh_with_coloured_vertices)
-		GEOImporter::InternReadcV(strtoul10(sz, &sz));
+		GEOImporter::InternReadcV(numElementsToImport);
 	else
 		throw DeadlyImportError("GEO: Never see me, bug in design.");
+
 
 	// import faces:
 	////GEOImporter::InternReadcF(strtoul10(sz, &sz)); // mesh colored faces
 	////GEOImporter::InternReadncF(strtoul10(sz, &sz)); // mesh colored vertices
 
-	const unsigned int numVertices = strtoul10(sz, &sz);
-	SkipSpaces(&sz);
-	const unsigned int numFaces = 42750 /*strtoul10(sz,&sz)*/;
-	long lastcolor, color;
-
-	pScene->mMeshes = new aiMesh*[pScene->mNumMeshes = 1];
-	aiMesh* mesh = pScene->mMeshes[0] = new aiMesh();
-
-
-	aiFace* faces = mesh->mFaces = new aiFace[numFaces];
-
-	std::vector<aiVector3D> tempPositions(numVertices);
-
-	// now read all vertex lines
-	for (unsigned int i = 0; i < numVertices; i++) {
-		if (!GetNextLine(buffer, line)) {
-			DefaultLogger::get()->error(
-					"GEO: The number of verts in the header is incorrect");
-			break;
-		}
-		aiVector3D& v = tempPositions[i];
-
-		sz = line;
-		SkipSpaces(&sz);
-		sz = fast_atoreal_move<float>(sz, (float&) v.x);
-		SkipSpaces(&sz);
-		sz = fast_atoreal_move<float>(sz, (float&) v.y);
-		SkipSpaces(&sz);
-		fast_atoreal_move<float>(sz, (float&) v.z);
-
-		if(flav == Mesh_with_coloured_vertices){
-			SkipSpaces(&sz);
-					if (!(color = strtoul10(sz, &sz)))
-						if (!(color = hexstrtoul10(--sz, &sz))) {
-							DefaultLogger::get()->error(
-									(Formatter::format(), "GEO: color read failed (sz) ", sz, " color ", color));
-							continue;
-						} else {
-							rgbH = true;
-						}
-					else
-						rgbH = false;
-
-					aiColor4D& col = mesh->mColors[0][faces->mIndices[i]];
-								LookupColor(color, col);
-		}
-	}
-
+if(flav != Lamp){
 	// First find out how many vertices we'll need
 	const char* old = buffer;
 	while (GetNextLine(buffer, line)) {
@@ -286,9 +284,9 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		throw DeadlyImportError("GEO: There are no valid faces");
 
 	// allocate storage for the output vertices
-	aiVector3D* verts = mesh->mVertices = new aiVector3D[mesh->mNumVertices];
+	verts = mesh->mVertices = new aiVector3D[mesh->mNumVertices];
 
-	aiColor4D* colOut = mesh->mColors[0] =
+	colOut = mesh->mColors[0] =
 			new aiColor4D[/*mesh->mNumFaces*/mesh->mNumVertices];
 
 	// second: now parse all face indices
@@ -307,10 +305,10 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		faces->mIndices = new unsigned int[faces->mNumIndices];
 		for (unsigned int m = 0; m < faces->mNumIndices; m++) {
 			SkipSpaces(&sz);
-			if ((idx = strtoul10(sz, &sz)) >= numVertices) {
+			if ((idx = strtoul10(sz, &sz)) >= numElementsToImport) {
 				DefaultLogger::get()->error(
 						"GEO: Vertex index is out of range");
-				idx = numVertices - 1;
+				idx = numElementsToImport - 1;
 			}
 			faces->mIndices[m] = p++;
 			*verts++ = tempPositions[idx];
@@ -337,6 +335,7 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		++i;
 		++faces;
 	}
+}
 	InternReadFinish();
 }
 void GEOImporter::InternReadcF(int count){
@@ -347,40 +346,79 @@ void GEOImporter::InternReadncF(int count){
 	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " not colored face(s)"));
 
 }
-void GEOImporter::InternReadLamp(int count){
-	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " light(s)"));
+void GEOImporter::InternReadLamp(int count) {
+	DefaultLogger::get()->debug(
+			(Formatter::format(), "GEO: Has to import ", count, " light(s)"));
 
-	pScene->mNumLights = count;
+	int num;
+
 	pScene->mLights = new aiLight*[count];
 
-	for(int i = 0; i < count; i++){
-		DefaultLogger::get()->debug((Formatter::format(), "GEO: Read light Nr.: ", i));
+	while (GetNextLine(buffer, line)) {
+		sz = line;
+		SkipSpaces(&sz);
+		unsigned int type = strtoul10(sz, &sz);
+		pScene->mNumLights++;
+		char name[16];
+		sprintf(name, "Lamp%04d%04X", pScene->mNumLights, type);
+		aiString tmpMatName;
+		tmpMatName.Set(name);
 		aiLight *tmpLight = new aiLight();
+		tmpLight->mName = tmpMatName;
 
-		/*if(i == 0)
-		tmpLight->mName = pScene->mRootNode->mName;
-		else
-			tmpLight->mName = "dunno";
+		DefaultLogger::get()->debug(
+				(Formatter::format(), "GEO: Create ", pScene->mNumLights, ". light: ", tmpMatName.data));
 
 		//type               - lamp type (0 - point lamp, 1 - spot lamp, 2 - sun)
-		tmpLight->mType = aiLightSource_DIRECTIONAL;
+		tmpLight->mType = (aiLightSourceType) type /*aiLightSource_AMBIENT*/;
 
+		GetNextLine(buffer, line);
+		sz = line;
+		SkipSpaces(&sz);
 		//spotsize spotblend - size of spot beam in degrees and intensity (length) of beam
 		// hm, calculate mAngleInnerCone mAngleOuterCone
+		float &ic = tmpLight->mAngleInnerCone;
+		float &oc = tmpLight->mAngleOuterCone;
+		sz = fast_atoreal_move<float>(sz, (float&) ic);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) oc);
 
+		GetNextLine(buffer, line);
+		sz = line;
+		SkipSpaces(&sz);
 		//R G B E            - color (RGB) and (E)nergy of lamp
 		// same as diffuse? tmpLight->mColorAmbient = new aiColor3D(1);
-		tmpLight->mColorDiffuse = new aiColor3D(1, 1, 1);
-		tmpLight->mColorSpecular = new aiColor3D(1, 1, 1);
+		aiColor3D &c = tmpLight->mColorDiffuse;
+		sz = fast_atoreal_move<float>(sz, (float&) c.r);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) c.g);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) c.b);
 
+		GetNextLine(buffer, line);
+		sz = line;
+		SkipSpaces(&sz);
 		//x y z              - lamp coordinates
-		tmpLight->mPosition = new aiVector3D(1, 1, 1);
+		aiVector3D &p = tmpLight->mPosition;
+		sz = fast_atoreal_move<float>(sz, (float&) p.x);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) p.y);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) p.z);
 
+		GetNextLine(buffer, line);
+		sz = line;
+		SkipSpaces(&sz);
 		//vecx vecy vecz     - lamp direction vector
-		tmpLight->mDirection = new aiVector3d(1, 1, 1);
-*/
-		// new tmp light set values then push to szene?
-		pScene->mLights[i] = tmpLight;
+		aiVector3D &d = tmpLight->mDirection;
+		sz = fast_atoreal_move<float>(sz, (float&) d.x);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) d.y);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) d.z);
+
+		pScene->mLights[num] = tmpLight;
+		num++;
 	}
 }
 void GEOImporter::InternReadFbS(int count){
@@ -389,40 +427,71 @@ void GEOImporter::InternReadFbS(int count){
 }
 void GEOImporter::InternReadcV(int count){
 	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " colored vertex/vertices"));
+	// now read all vertex lines
+	for (unsigned int i = 0; i < count; i++) {
+		if (!GetNextLine(buffer, line)) {
+			DefaultLogger::get()->error(
+					"GEO: The number of verts in the header is incorrect");
+			break;
+		}
+		aiVector3D& v = tempPositions[i];
+
+		sz = line;
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) v.x);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) v.y);
+		SkipSpaces(&sz);
+		fast_atoreal_move<float>(sz, (float&) v.z);
+
+			SkipSpaces(&sz);
+					if (!(color = strtoul10(sz, &sz)))
+						if (!(color = hexstrtoul10(--sz, &sz))) {
+							DefaultLogger::get()->error(
+									(Formatter::format(), "GEO: color read failed (sz) ", sz, " color ", color));
+							continue;
+						} else {
+							rgbH = true;
+						}
+					else
+						rgbH = false;
+
+					aiColor4D& col = mesh->mColors[0][faces->mIndices[i]];
+								LookupColor(color, col);
+
+	}
 
 }
 void GEOImporter::InternReadncV(int count){
 	DefaultLogger::get()->debug((Formatter::format(), "GEO: Has to import ", count, " not colored vertex/vertices"));
+	// now read all vertex lines
+	for (unsigned int i = 0; i < count; i++) {
+		if (!GetNextLine(buffer, line)) {
+			DefaultLogger::get()->error(
+					"GEO: The number of verts in the header is incorrect");
+			break;
+		}
+		aiVector3D& v = tempPositions[i];
+
+		sz = line;
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) v.x);
+		SkipSpaces(&sz);
+		sz = fast_atoreal_move<float>(sz, (float&) v.y);
+		SkipSpaces(&sz);
+		fast_atoreal_move<float>(sz, (float&) v.z);
+	}
 
 }
 void GEOImporter::InternReadFinish(){
 	// generate the output node graph
 	pScene->mRootNode = new aiNode();
 	pScene->mRootNode->mName.Set("<GEORoot>");
-//	pScene->mRootNode->mMeshes = new unsigned int [pScene->mRootNode->mNumMeshes = 1];
-	pScene->mRootNode->mNumMeshes = 1;
-	pScene->mRootNode->mMeshes = new unsigned int[21];
+	pScene->mRootNode->mMeshes = new unsigned int [pScene->mRootNode->mNumMeshes = pScene->mNumMeshes];
 
-	for (int i = 0; i < 21; i++) {
+	for (unsigned int i = 0; i < pScene->mRootNode->mNumMeshes; i++) {
 		pScene->mRootNode->mMeshes[i] = i;
 	}
-
-	/*	pScene->mMaterials = new aiMaterial*[21];
-	 aiMaterial* pcMat;
-
-	 for (int i = 0; i < 21; i++) {
-	 pcMat = new aiMaterial();
-	 //aiColor4D clr(1.0f,0.6f,0.6f,1.0f);
-	 char *name;
-	 sprintf(name, "%d", i);
-	 const aiString tmpMatName(name);
-	 pcMat->AddProperty(&tmpMatName, AI_MATKEY_NAME);
-	 pcMat->AddProperty(&(ColorTable[i]), 1, AI_MATKEY_COLOR_DIFFUSE);
-	 pScene->mMaterials[i] = pcMat;
-	 }
-
-	 const int twosided = 1;
-	 pcMat->AddProperty(&twosided, 1, AI_MATKEY_TWOSIDED);*/
 }
 
 #endif // !! ASSIMP_BUILD_NO_GEO_IMPORTER

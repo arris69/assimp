@@ -99,7 +99,16 @@ private:
 	};
 	Flavor flav;
 	bool rgbH;
-	aiScene* pScene;
+	aiScene *pScene;
+	const char *buffer;
+	const char *sz;
+	char line[4096];
+	std::vector<aiVector3D> tempPositions;
+	aiMesh *mesh;
+	aiFace *faces;
+	long lastcolor, color;
+	aiVector3D *verts;
+	aiColor4D *colOut;
 };
 
 } // end of namespace Assimp
