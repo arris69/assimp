@@ -45,7 +45,8 @@
 #define AI_GEOLOADER_H_INCLUDED
 
 #include "BaseImporter.h"
-#include "../include/assimp/types.h"
+#include "assimp/ProgressHandler.hpp"
+#include "assimp/types.h"
 #include <vector>
 
 namespace Assimp {
@@ -76,6 +77,10 @@ protected:
 	const aiImporterDesc* GetInfo() const;
 
 	// -------------------------------------------------------------------
+	void SetupProperties(const Importer* pImp);
+	bool ValidateFlags(unsigned int pFlags) const;
+
+	// -------------------------------------------------------------------
 	/** Imports the given file into the given scene structure. 
 	 * See BaseImporter::InternReadFile() for details
 	 */
@@ -88,6 +93,7 @@ protected:
 	void InternReadcV(int count);
 	void InternReadncV(int count);
 	void InternReadFinish();
+	void InternReadColor(int pos);
 	void LookupColor(long index, aiColor4D& cOut);
 
 private:
@@ -104,11 +110,13 @@ private:
 	const char *sz;
 	char line[4096];
 	std::vector<aiVector3D> tempPositions;
+	std::vector<aiColor4D> tempColors;
 	aiMesh *mesh;
 	aiFace *faces;
 	long lastcolor, color;
 	aiVector3D *verts;
 	aiColor4D *colOut;
+	float fifty_percent;
 };
 
 } // end of namespace Assimp
