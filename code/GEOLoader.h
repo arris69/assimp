@@ -86,14 +86,14 @@ protected:
 	 */
 	void InternReadFile(const std::string& pFile, aiScene* pScene,
 			IOSystem* pIOHandler);
-	void InternReadcF(int count);
-	void InternReadncF(int count);
-	void InternReadLamp(int count);
-	void InternReadFbS(int count);
-	void InternReadcV(int count);
-	void InternReadncV(int count);
+	void InternReadcF(unsigned int count);
+	void InternReadncF(unsigned int count);
+	void InternReadLamp(unsigned int count);
+	void InternReadFbS(unsigned int count);
+	void InternReadcV(unsigned int count);
+	void InternReadncV(unsigned int count);
 	void InternReadFinish();
-	void InternReadColor(int pos);
+	void InternReadColor(unsigned int pos);
 	void LookupColor(long index, aiColor4D& cOut);
 
 private:
@@ -113,10 +113,9 @@ private:
 	std::vector<aiColor4D> tempColors;
 	aiMesh *mesh;
 	aiFace *faces;
-	long lastcolor, color;
+	long lastcolor, color; // TODO: reserved to detect material change.
 	aiVector3D *verts;
 	aiColor4D *colOut;
-	float fifty_percent;
 };
 
 } // end of namespace Assimp

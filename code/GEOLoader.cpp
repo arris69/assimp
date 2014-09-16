@@ -78,8 +78,8 @@ const char *strcasestr(const char *arg1, const char *arg2) {
 		a = arg1;
 		b = arg2;
 		while((*a++ | 32) == (*b++ | 32))
-			if(!*b)
-				return (arg1);
+		if(!*b)
+		return (arg1);
 	}
 	return(NULL);
 }
@@ -99,7 +99,7 @@ int strcasecmp(const char *s1, const char *s2) {
 // @formatter:off
 static const aiImporterDesc desc = {
 		"Videoscape GEO Importer",
-		"",
+		"ZsoltTech.Com® <arris@zsolttech.com>",
 		"",
 		"http://paulbourke.net/dataformats/geo/ \
 		color settings from: https://home.comcast.net/~erniew/getstuff/geo.html \
@@ -111,7 +111,7 @@ static const aiImporterDesc desc = {
 		0,
 		0,
 		0,
-		"3DG geo GOUR" /* parsing test */
+		"3DG geo GouR" /* platform parsing test */
 };
 // @formatter:on
 // *INDENT-ON*
@@ -119,7 +119,7 @@ static const aiImporterDesc desc = {
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 GEOImporter::GEOImporter() :
-		rgbH(false), pScene(0), tempPositions(0), tempColors(0), fifty_percent(0.01f) {
+		pScene(0), rgbH(false), tempPositions(0), tempColors(0) {
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -139,7 +139,8 @@ bool GEOImporter::CanRead(const std::string& pFile, IOSystem* pIOHandler,
 		if (!pIOHandler)
 			return true;
 		const char* tokens[] = { "gour", "3dg" }; /* ref: 3dg1 3dg2 3dg3 gour */
-		return SearchFileHeaderForToken(pIOHandler, pFile, tokens, ARRAYSIZE(tokens));
+		return SearchFileHeaderForToken(pIOHandler, pFile, tokens,
+				ARRAYSIZE(tokens));
 	}
 	return false;
 }
@@ -152,20 +153,14 @@ const aiImporterDesc* GEOImporter::GetInfo() const {
 // ------------------------------------------------------------------------------------------------
 // Setup configuration properties
 void GEOImporter::SetupProperties(const Importer* pImp) {
-	DefaultLogger::get()->info(
-			(Formatter::format(), "Unsupported operation: ", __FUNCTION__));
+	DefaultLogger::get()->debug(
+			(Formatter::format(), "GEO: ", __FUNCTION__));
 }
 
-bool GEOImporter::ValidateFlags(unsigned int pFlags) const {
-
-	pFlags &= ~aiProcess_ValidateDataStructure;
-	DefaultLogger::get()->info(
-			(Formatter::format(), "Unsupported operation: ", __FUNCTION__));
-	return true;
-}
 // ------------------------------------------------------------------------------------------------
 // Imports the given file into the given scene structure.
-void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler) {
+void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
+		IOSystem* pIOHandler) {
 	boost::scoped_ptr<IOStream> file(pIOHandler->Open(pFile, "rb"));
 
 	// Check whether we can read from the file
@@ -185,8 +180,8 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSy
 	buffer = &mBuffer2[0];
 
 	GetNextLine(buffer, line);
-	while ('G' == line[0] || ('3' == line[0] & 'D' == line[1]) || '#' == line[0]) {
-		if ('G' == line[0] || ('3' == line[0] & 'D' == line[1]))
+	while (('G' == line[0] || ('3' == line[0]) & ('D' == line[1]) || '#' == line[0])) {
+		if (('G' == line[0] || ('3' == line[0]) & ('D' == line[1])))
 			switch (line[3]) {
 			case '1':
 				flav = Mesh_with_coloured_faces;
@@ -195,10 +190,12 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSy
 				break;
 			case '2':
 				flav = Lamp;
-			case '3':
-				flav = (flav) ? flav : Gouraud_curves_or_NURBS_surfaces;
 				DefaultLogger::get()->debug(
-						(Formatter::format(), "Signature: ", line, ", must not read any color data, but lights or courves"));
+						(Formatter::format(), "Signature: ", line, ", must not read any color data, just lights, some postprocess stepps will fail."));
+				break;
+			case '3':
+				DefaultLogger::get()->debug(
+						(Formatter::format(), "Signature: ", line, ", must not read any color data, but surfaces or curves"));
 				break;
 			case 'R':
 				flav = Mesh_with_coloured_vertices;
@@ -214,41 +211,34 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSy
 	}
 
 	sz = line;
+
 	const unsigned int numElementsToImport = strtoul10(sz, &sz);
-
-	progress->UpdateFileRead(fifty_percent, numElementsToImport);
-	//progress->Update(fifty_percent);
-
-	const unsigned int numFaces = 30367;
+	const unsigned int numFaces = 32365 * 3; // TODO: find a dynamic way?
 
 	pScene->mMeshes = new aiMesh*[pScene->mNumMeshes = 1];
 	mesh = pScene->mMeshes[0] = new aiMesh();
 	faces = mesh->mFaces = new aiFace[numFaces];
-
 	tempPositions.resize(numElementsToImport);
 
 	if (flav == Mesh_with_coloured_faces)
-		GEOImporter::InternReadncV(numElementsToImport);
+		InternReadncV(numElementsToImport);
 	else if (flav == Lamp)
-		GEOImporter::InternReadLamp(numElementsToImport);
+		InternReadLamp(numElementsToImport);
 	else if (flav == Gouraud_curves_or_NURBS_surfaces)
-		GEOImporter::InternReadFbS(numElementsToImport); // here numElementsToImport is the surface type !!!
+		InternReadFbS(numElementsToImport); // here numElementsToImport is the surface type !!!
 	else if (flav == Mesh_with_coloured_vertices)
-		GEOImporter::InternReadcV(numElementsToImport);
+		InternReadcV(numElementsToImport);
 	else
-		throw DeadlyImportError("GEO: Never see me, bug in design.");
+		throw DeadlyImportError("GEO: Never see me, bug in assimp's api design.");
 
-	DefaultLogger::get()->debug(
-			(Formatter::format(), "GEO: ", __FUNCTION__, " start count faces and calculate total verticesspace"));
-
-	const char* old = buffer;
-	int fCaounter = 0;
-	if (flav == Mesh_with_coloured_faces
-			| flav == Mesh_with_coloured_vertices) {
+const char* old = buffer;
+	if ((flav == Mesh_with_coloured_faces)
+			| (flav == Mesh_with_coloured_vertices)) {
 		// First find out how many vertices we'll need
 		while (GetNextLine(buffer, line)) {
 			sz = line;
-			if (!(faces->mNumIndices = strtoul10(sz, &sz))) {
+			faces->mNumIndices = strtoul10(sz, &sz);
+			if (!faces->mNumIndices) {
 				DefaultLogger::get()->error(
 						"GEO: Faces with zero indices aren't allowed");
 				continue;
@@ -256,17 +246,16 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSy
 			mesh->mNumFaces++; // TODO: implement material stuff needs new mesh
 			mesh->mNumVertices += faces->mNumIndices;
 			faces++;
-			//progress->UpdateFileRead(fifty_percent, numElementsToImport);
-			progress->Update(fifty_percent);
-						fCaounter++;
 		}
+
+		progress->Update(.25f);
 
 		if (!mesh->mNumVertices)
 			throw DeadlyImportError("GEO: There are no valid faces");
 
 		// shrink the storage space?
-		// malloc(mesh->mFaces, sizeof(aiFace*) * fCaounter);
-		DefaultLogger::get()->debug((Formatter::format(), "GEO: face storage = ", ARRAYSIZE(mesh->mFaces), " but just need ", fCaounter));
+		DefaultLogger::get()->debug(
+				(Formatter::format(), "GEO: face storage just needs ", mesh->mNumFaces, " faces, not ", numFaces));
 	}
 
 	// allocate storage for the output vertices
@@ -280,23 +269,18 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSy
 
 		// import faces:
 		if (flav == Mesh_with_coloured_faces)
-			InternReadcF(fCaounter); // mesh colored faces
-		//else if (flav == Mesh_with_coloured_vertices)
-			//InternReadncF(fCaounter); // mesh colored vertices
-
-		DefaultLogger::get()->debug((Formatter::format(), "GEO: ", __LINE__));
-
+			InternReadcF(mesh->mNumFaces); // mesh colored faces
+		else /*if (flav == Mesh_with_coloured_vertices)*/
+			InternReadncF(mesh->mNumFaces); // mesh colored vertices
 	}
-	DefaultLogger::get()->debug((Formatter::format(), "GEO: ", __LINE__));
-
 	InternReadFinish();
 }
-void GEOImporter::InternReadLamp(int count) {
+
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadLamp(unsigned int count) {
+	progress->Update(.125f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " light(s)"));
-
-	//delete[] faces;
-	//delete pScene->mMeshes[0];
 
 	pScene->mLights = new aiLight*[count];
 
@@ -360,21 +344,26 @@ void GEOImporter::InternReadLamp(int count) {
 		pScene->mLights[pScene->mNumLights] = tmpLight;
 		pScene->mNumLights++;
 	}
+	progress->Update(.24f);
 }
-void GEOImporter::InternReadFbS(int count) {
+
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadFbS(unsigned int count) {
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import type ", count, " form(s)"));
 	while (GetNextLine(buffer, line)) {
-			sz = line;
+		sz = line;
 	}
-	throw DeadlyImportError("GEO: not supported yet.");
+	throw DeadlyImportError("GEO: Curves and surfaces not supported yet.");
 }
-void GEOImporter::InternReadcV(int count) {
+
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadcV(unsigned int count) {
+	progress->Update(.125f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " colored vertex/vertices"));
 
 	tempColors.resize(count);
-	mesh->mColors[0] = new aiColor4D[count];
 
 	// now read all vertex lines
 	for (unsigned int i = 0; i < count; i++) {
@@ -396,10 +385,15 @@ void GEOImporter::InternReadcV(int count) {
 
 		InternReadColor(i);
 	}
+	progress->Update(.24f);
 }
-void GEOImporter::InternReadncV(int count) {
+
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadncV(unsigned int count) {
+	progress->Update(.125f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " not colored vertex/vertices"));
+
 	// now read all vertex lines
 	for (unsigned int i = 0; i < count; i++) {
 
@@ -418,12 +412,16 @@ void GEOImporter::InternReadncV(int count) {
 		SkipSpaces(&sz);
 		fast_atoreal_move<float>(sz, (float&) v.z);
 	}
+	progress->Update(.24f);
 }
-void GEOImporter::InternReadcF(int count) {
+
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadcF(unsigned int count) {
+	progress->Update(.25f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " colored face(s)"));
+
 	tempColors.resize(count);
-	mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
 
 	for (unsigned int i = 0, p = 0; i < count;) {
 		if (!GetNextLine(buffer, line))
@@ -431,39 +429,43 @@ void GEOImporter::InternReadcF(int count) {
 
 		sz = line;
 
-		unsigned int idx;
+		unsigned int idx, pos;
 		if (!(idx = strtoul10(sz, &sz)))
 			continue;
 
 		faces->mIndices = new unsigned int[faces->mNumIndices = idx];
+		if(!mesh->mColors[0]){
+			mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
+			DefaultLogger::get()->debug("GEO: got new mesh");
+		}
 		for (unsigned int m = 0; m < faces->mNumIndices; m++) {
 			SkipSpaces(&sz);
-			/*if ((idx = strtoul10(sz, &sz)) >= numElementsToImport) {
-				DefaultLogger::get()->error(
-						"GEO: Vertex index is out of range");
-				idx = numElementsToImport - 1;
-			}*/
-			idx = strtoul10(sz, &sz);
+			pos = strtoul10(sz, &sz);
 			faces->mIndices[m] = p++;
-			*verts++ = tempPositions[idx];
+			*verts++ = tempPositions[pos];
 		}
 
-		InternReadColor(idx);
-//
-			for (unsigned int l = 0; l < faces->mNumIndices; l++) {
-				aiColor4D& col = mesh->mColors[0][faces->mIndices[l]];
-				col = tempColors[idx];
-			}
+		InternReadColor(pos);
 
-		++i;
-		++faces;
+		for (unsigned int l = 0; l < faces->mNumIndices; l++) {
+			aiColor4D& col = mesh->mColors[0][faces->mIndices[l]];
+			col = tempColors[pos];
+		}
+		i++;
+		faces++;
+		// TODO: face mesh material handling
 	}
+	if(count)
+		--faces;
+
+	progress->Update(.45f);
 }
-void GEOImporter::InternReadncF(int count) {
+
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadncF(unsigned int count) {
+	progress->Update(.25f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " not colored face(s)"));
-
-	mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
 
 	for (unsigned int i = 0, p = 0; i < mesh->mNumFaces;) {
 		if (!GetNextLine(buffer, line))
@@ -471,29 +473,33 @@ void GEOImporter::InternReadncF(int count) {
 
 		sz = line;
 
-		unsigned int idx;
+		unsigned int idx, pos;
 		if (!(idx = strtoul10(sz, &sz)))
 			continue;
 
 		faces->mIndices = new unsigned int[faces->mNumIndices = idx];
+		if(!mesh->mColors[0]){
+					mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
+					DefaultLogger::get()->debug("GEO: got new mesh");
+				}
 		for (unsigned int m = 0; m < faces->mNumIndices; m++) {
 			SkipSpaces(&sz);
-			/*if ((idx = strtoul10(sz, &sz)) >= numElementsToImport) {
-				DefaultLogger::get()->error(
-						"GEO: Vertex index is out of range");
-				idx = numElementsToImport - 1;
-			}*/
-			idx = strtoul10(sz, &sz);
+			pos = strtoul10(sz, &sz);
 			faces->mIndices[m] = p++;
-			*verts++ = tempPositions[idx];
+			*verts++ = tempPositions[pos];
 			aiColor4D& col = mesh->mColors[0][faces->mIndices[m]];
-									col = tempColors[idx];
+			col = tempColors[pos];
 		}
-
-		++i;
-		++faces;
+		i++;
+		faces++;
 	}
+	if(count)
+		--faces;
+
+	progress->Update(.45f);
 }
+
+// ------------------------------------------------------------------------------------------------
 void GEOImporter::InternReadFinish() {
 	// generate the output node graph
 	pScene->mRootNode = new aiNode();
@@ -507,9 +513,9 @@ void GEOImporter::InternReadFinish() {
 	}
 }
 
-void GEOImporter::InternReadColor(int pos) {
-	DefaultLogger::get()->debug(
-			(Formatter::format(), "GEO: insert color onto position ", pos));
+// ------------------------------------------------------------------------------------------------
+void GEOImporter::InternReadColor(unsigned int pos) {
+
 	aiColor4D& c = tempColors[pos];
 
 	// if just one mesh sync with temColors?
@@ -529,6 +535,7 @@ void GEOImporter::InternReadColor(int pos) {
 
 	LookupColor(color, c);
 }
+
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
 	if (rgbH) {
@@ -539,39 +546,13 @@ void GEOImporter::LookupColor(long iColorIndex, aiColor4D& cOut) {
 	} else {
 		int index = (iColorIndex & 0x0f);
 		cOut = *((const aiColor4D*) (&g_ColorTable[index]));
-		//cOut = *(&g_ColorTable[index]);
-		//DefaultLogger::get()->debug((Formatter::format(), "Colorindex: ", iColorIndex & 0x0f, " Surface: ", g_Effect[(iColorIndex & 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
+
 		if ((iColorIndex & 0xf0)) {
 			DefaultLogger::get()->debug(
-					(Formatter::format(), "Achtung! Material required: ", iColorIndex, " Surface: ", g_Effect[(iColorIndex
-							& 0x30) >> 4], " HiHi:", (iColorIndex & 0xC0)));
-
-			/*	//pScene->mMaterials = new aiMaterial*[pScene->mNumMaterials];
-			 //pScene->mMaterials = (aiMaterial **)realloc(pScene->mMaterials, sizeof(aiMaterial*) * pScene->mNumMaterials);
-
-			 //int x[3] = {1, 2, 3};
-			 std::vector<aiMaterial*> v(pScene->mMaterials, pScene->mMaterials + ARRAYSIZE(pScene->mMaterials));
-			 v.push_back(pcMat);
-			 */
-			/*char name[16];
-			 sprintf(name, "%08X", (int)iColorIndex);
-			 aiString tmpMatName;
-			 tmpMatName.Set(name);
-			 pcMat->AddProperty(&tmpMatName, AI_MATKEY_NAME);
-			 pcMat->AddProperty(&cOut, 1, AI_MATKEY_COLOR_DIFFUSE);
-			 pScene->mMaterials[pScene->mNumMaterials] = pcMat;
-
-			 const int twosided = 1;
-			 pcMat->AddProperty(&twosided, 1, AI_MATKEY_TWOSIDED);
-
-			 pScene->mNumMaterials++;*/
+					(Formatter::format(), "Achtung! (unimplemented function) Material required: ", iColorIndex, " Surface effect: ", (iColorIndex
+							& 0x30) >> 4, " Hibit:", (iColorIndex & 0xC0)));
 		}
 	}
-
-	//pScene->mNumMeshes++;
-	//pScene->mMeshes = (aiMesh **)realloc(&pScene->mMeshes, sizeof(aiMesh*) * pScene->mNumMeshes);
-	//	/*aiMesh* mesh =*/ pScene->mMeshes[pScene->mNumMeshes - 1] = new aiMesh();
-	// mwsh->mMaterialIndex = thismatindex;
 }
 
 #endif // !! ASSIMP_BUILD_NO_GEO_IMPORTER
