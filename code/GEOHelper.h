@@ -22,31 +22,6 @@
 
 #include <errno.h>
 
-inline unsigned int hexstrtoul10(const char* in, const char** out = 0) {
-	/* http://stackoverflow.com/questions/4132318/how-to-convert-hex-string-to-unsigned-64bit-uint64-t-integer-in-a-fast-and-saf answer 3. */
-	//char *in, *end;
-	unsigned long long result;
-	errno = 0;
-	// if (!isxdigit(in[0]) || (in[1] && !isxdigit(in[1])))
-	// if (in[0]=='0' && in[1])
-	//result = strtoull(in, &end, 16);
-	result = strtoull(in, (char **) &out, 16);
-	if (result == 0 && *out == in) {
-		printf("/* str was not a number */ %s\n", in);
-	} else if (result == ULLONG_MAX && errno) {
-		printf("/* the value of str does not fit in unsigned long long */ %s\n",
-				in);
-	} else if (*out) {
-		printf(
-				"/* str began with a number but has junk left over at the end */ %s\n",
-				in);
-	} else {
-		printf("/* str was a number */ %s <-> %llu rest of line %s\n", in,
-				result, *out);
-	}
-	return (unsigned int) result;
-}
-
 // helper macro to determine the size of an array
 #if (!defined ARRAYSIZE)
 #	define ARRAYSIZE(_array) (int(sizeof(_array) / sizeof(_array[0])))
@@ -92,5 +67,30 @@ int strcasecmp(const char *s1, const char *s2) {
 	return (*s2 == 0) ? (*s1 != 0) : (*s1 == 0) ? -1 : (tolower(*s1) - tolower(*s2));
 }
 #endif
+
+inline unsigned int hexstrtoul10(const char* in, const char** out = 0) {
+	/* http://stackoverflow.com/questions/4132318/how-to-convert-hex-string-to-unsigned-64bit-uint64-t-integer-in-a-fast-and-saf answer 3. */
+	//char *in, *end;
+	unsigned long long result;
+	errno = 0;
+	// if (!isxdigit(in[0]) || (in[1] && !isxdigit(in[1])))
+	// if (in[0]=='0' && in[1])
+	//result = strtoull(in, &end, 16);
+	result = strtoull(in, (char **) &out, 16);
+	if (result == 0 && *out == in) {
+		printf("/* str was not a number */ %s\n", in);
+	} else if (result == ULLONG_MAX && errno) {
+		printf("/* the value of str does not fit in unsigned long long */ %s\n",
+				in);
+	} else if (*out) {
+		printf(
+				"/* str began with a number but has junk left over at the end */ %s\n",
+				in);
+	} else {
+		printf("/* str was a number */ %s <-> %llu rest of line %s\n", in,
+				result, *out);
+	}
+	return (unsigned int) result;
+}
 
 #endif /* GEOHELPER_H_ */

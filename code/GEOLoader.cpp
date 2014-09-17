@@ -47,7 +47,15 @@
 #ifndef ASSIMP_BUILD_NO_GEO_IMPORTER
 
 // internal headers
+#include "GEOHelper.h"
 #include "GEOLoader.h"
+#include "ParsingUtils.h"
+#include "fast_atof.h"
+
+#include "TinyFormatter.h"
+
+#include "GEOColorTable.h"
+
 
 using namespace Assimp;
 
@@ -390,7 +398,7 @@ void GEOImporter::InternReadcF(unsigned int count) {
 			continue;
 
 		faces->mIndices = new unsigned int[faces->mNumIndices = idx];
-		if(!mesh->mColors[0]){
+		if (!mesh->mColors[0]) {
 			mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
 			DefaultLogger::get()->debug("GEO: got new mesh");
 		}
@@ -434,10 +442,10 @@ void GEOImporter::InternReadncF(unsigned int count) {
 			continue;
 
 		faces->mIndices = new unsigned int[faces->mNumIndices = idx];
-		if(!mesh->mColors[0]){
-					mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
-					DefaultLogger::get()->debug("GEO: got new mesh");
-				}
+		if (!mesh->mColors[0]) {
+			mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
+			DefaultLogger::get()->debug("GEO: got new mesh");
+		}
 		for (unsigned int m = 0; m < faces->mNumIndices; m++) {
 			SkipSpaces(&sz);
 			pos = strtoul10(sz, &sz);
