@@ -68,7 +68,6 @@ ObjFileParser::ObjFileParser(std::vector<char> &Data,const std::string &strModel
 	// Create the model instance to store all the data
 	m_pModel = new ObjFile::Model();
 	m_pModel->m_ModelName = strModelName;
-	m_ReselectMode = false;
 	
     // create default material and store it
 	m_pModel->m_pDefaultMaterial = new ObjFile::Material();
@@ -141,9 +140,6 @@ void ObjFileParser::parseFile()
 
 		case 'u': // Parse a material desc. setter
 			{
-				if(m_ReselectMode)
-					DefaultLogger::get()->debug("Operating in \"modification mode\"");
-
 				getMaterialDesc();
 			}
 			break;
@@ -159,10 +155,7 @@ void ObjFileParser::parseFile()
 
 		case 'g': // Parse group name
 			{
-				if (*(m_DataIt + 1) == 'r')
-					reselectGroup();
-				else
-					getGroupName();
+				getGroupName();
 			}
 			break;
 
@@ -248,7 +241,7 @@ void ObjFileParser::getVector( std::vector<aiVector3D> &point3d_array ) {
         SkipToken( tmp );
         ++numComponents;
     }
-    float x = NAN, y = std::numeric_limits<float>::quiet_NaN(), z = std::numeric_limits<float>::signaling_NaN();
+    float x, y, z;
     if( 2 == numComponents ) {
         copyNextWord( m_buffer, BUFFERSIZE );
         x = ( float ) fast_atof( m_buffer );
@@ -458,7 +451,7 @@ void ObjFileParser::getMaterialDesc()
 	// Each material request a new object.
 	// Sometimes the object is already created (see 'o' tag by example), but it is not initialized !
 	// So, we create a new object only if the current on is already initialized !
-	if (m_pModel->m_pCurrent != NULL && !m_ReselectMode &&
+	if (m_pModel->m_pCurrent != NULL &&
 		(	m_pModel->m_pCurrent->m_Meshes.size() > 1 ||
 			(m_pModel->m_pCurrent->m_Meshes.size() == 1 && m_pModel->m_Meshes[m_pModel->m_pCurrent->m_Meshes[0]]->m_Faces.size() != 0)	)
 		)
@@ -495,19 +488,6 @@ void ObjFileParser::getMaterialDesc()
 			createMesh();	
 		}
 		m_pModel->m_pCurrentMesh->m_uiMaterialIndex = getMaterialIndex( strName );
-
-		/// this must happens here...
-		if(m_ReselectMode){
-			DefaultLogger::get()->debug("RESELECT: set all meshes in group to material " + strName);
-			for (std::vector<ObjFile::Object*>::const_iterator oit = m_pModel->m_Objects.begin();
-					oit != m_pModel->m_Objects.end();
-					++oit){
-				if ((*oit)->m_strObjName == m_pModel->m_strActiveGroup){
-					DefaultLogger::get()->info("OBJ: reselected found ObjFile::Object: " + (*oit)->m_strObjName);
-					m_pModel->m_Meshes[(*oit)->m_Meshes[0]]->m_uiMaterialIndex = getMaterialIndex( strName );
-				}
-			}
-		}
 	}
 
 	// Skip rest of line
@@ -545,42 +525,9 @@ void ObjFileParser::getMaterialLib()
 	while (m_DataIt != m_DataItEnd && !isNewLine(*m_DataIt))
 		m_DataIt++;
 
-/* remove trailing spaces, maybe for some static/inline function */
-/*
-	std::string whitespaces (" \t\f\v\n\r");
-	std::size_t found = sourceString.find_last_not_of(whitespaces);
-	if (found != std::string::npos)
-		sourceString.erase(found + 1);
-	else
-		sourceString.clear();     
-*/
 	// Check for existence
-	std::string sourceString(pStart, &(*m_DataIt));
-	std::string strMatName;
-
-	// Allocate the destination space
-	strMatName.resize(sourceString.size());
-	// Convert the source string to lower case
-	// some ?broken? obj files has definitions like: mtllib kittykart.MTL
-	std::transform(sourceString.begin(),
-			sourceString.end(),
-			strMatName.begin(),
-			::tolower);
-
+	const std::string strMatName(pStart, &(*m_DataIt));
 	IOStream *pFile = m_pIO->Open(strMatName);
-
-	if (!pFile ){
-		DefaultLogger::get()->warn("OBJ: Unable to locate lowercased material file " + strMatName + " try original name " + sourceString);
-		strMatName.assign(sourceString);
-		pFile = m_pIO->Open(strMatName);
-	}
-
-	if (!pFile ){ /* catch case: StarShip.obj - starship.mtl and magically also mtl names with trailing spaces (like in ramdisk.obj) */
-		DefaultLogger::get()->warn("OBJ: Unable to locate material file " + strMatName + " try build from obj name " + m_pModel->m_ModelName);
-		strMatName.assign(m_pModel->m_ModelName);
-		strMatName.replace(strMatName.end() - 3, strMatName.end(), "mtl");
-		pFile = m_pIO->Open(strMatName);
-	}
 
 	if (!pFile )
 	{
@@ -588,8 +535,6 @@ void ObjFileParser::getMaterialLib()
 		m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
 		return;
 	}
-
-	DefaultLogger::get()->debug("MTL: read material file " + strMatName);
 
 	// Import material library data from file
 	std::vector<char> buffer;
@@ -703,55 +648,6 @@ void ObjFileParser::getGroupNumber()
 void ObjFileParser::getGroupNumberAndResolution()
 {
 	// Not used
-
-	m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
-}
-
-// -------------------------------------------------------------------
-//	in progress
-void ObjFileParser::reselectGroup()
-{
-	m_DataIt = getNextToken<DataArrayIt>(m_DataIt, m_DataItEnd);
-	if( m_DataIt == m_DataItEnd ) {
-		return;
-	}
-	char *pStart = &(*m_DataIt);
-	while( m_DataIt != m_DataItEnd && !isSeparator( *m_DataIt ) ) {
-		++m_DataIt;
-	}
-
-	std::string strObjectName(pStart, &(*m_DataIt));
-
-	if(strObjectName.empty())
-		DefaultLogger::get()->error("OBJ: fatal error: No GroupName to reselect");
-	else
-		strObjectName.insert(0, "g ");
-
-	DefaultLogger::get()->debug("RESELECT: " + strObjectName + " now in " + m_pModel->m_strActiveGroup);
-
-	// Reset current object
-	m_pModel->m_pCurrent = NULL;
-
-	// Search for actual object
-	for (std::vector<ObjFile::Object*>::const_iterator it = m_pModel->m_Objects.begin();
-			it != m_pModel->m_Objects.end();
-			++it)
-	{
-		if ((*it)->m_strObjName == strObjectName)
-		{
-			DefaultLogger::get()->debug("RESELECT: found group " + strObjectName);
-			m_pModel->m_pCurrent = *it;
-			break;
-		}
-	}
-
-	// not clear why they use the group stuff..., o = g no really difference
-	m_pModel->m_strActiveGroup = strObjectName;
-
-	std::string tmp(m_pModel->m_pCurrentMaterial->MaterialName.C_Str());
-	DefaultLogger::get()->info("OBJ: has material: " + tmp);
-
-	m_ReselectMode = true;	
 
 	m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
 }

@@ -109,9 +109,7 @@ const aiImporterDesc* ObjFileImporter::GetInfo () const
 // ------------------------------------------------------------------------------------------------
 //	Obj-file import implementation
 void ObjFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler)
-{
-    DefaultIOSystem io;
-    
+{    
 	// Read file into memory
 	const std::string mode = "rb";
 	boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile, mode));
@@ -138,6 +136,22 @@ void ObjFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene,
 	else
 	{
 		strModelName = pFile;
+	}
+
+	// process all '\'
+	std::vector<char> ::iterator iter = m_Buffer.begin();
+	while (iter != m_Buffer.end())
+	{
+		if (*iter == '\\')
+		{
+			// remove '\'
+			iter = m_Buffer.erase(iter);
+			// remove next character
+			while (*iter == '\r' || *iter == '\n')
+				iter = m_Buffer.erase(iter);
+		}
+		else
+			++iter;
 	}
 
 	// parse the file into a temporary representation
@@ -216,15 +230,9 @@ aiNode *ObjFileImporter::createNodes(const ObjFile::Model* pModel, const ObjFile
 	for ( unsigned int i=0; i< pObject->m_Meshes.size(); i++ )
 	{
 		unsigned int meshId = pObject->m_Meshes[ i ];
-		aiMesh *pMesh = new aiMesh;
-		createTopology( pModel, pObject, meshId, pMesh );	
-		if ( pMesh->mNumVertices > 0 ) 
-		{
+		aiMesh *pMesh = createTopology( pModel, pObject, meshId );	
+        if( pMesh && pMesh->mNumFaces > 0 ) {
 			MeshArray.push_back( pMesh );
-		}
-		else
-		{
-			delete pMesh;
 		}
 	}
 
@@ -258,22 +266,22 @@ aiNode *ObjFileImporter::createNodes(const ObjFile::Model* pModel, const ObjFile
 
 // ------------------------------------------------------------------------------------------------
 //	Create topology data
-void ObjFileImporter::createTopology(const ObjFile::Model* pModel, 
-									 const ObjFile::Object* pData, 
-									 unsigned int uiMeshIndex,
-									 aiMesh* pMesh )
+aiMesh *ObjFileImporter::createTopology( const ObjFile::Model* pModel, const ObjFile::Object* pData, 
+                                         unsigned int uiMeshIndex )
 {
 	// Checking preconditions
 	ai_assert( NULL != pModel );
     if( NULL == pData ) {
-        return;
+        return NULL;
     }
 
 	// Create faces
 	ObjFile::Mesh *pObjMesh = pModel->m_Meshes[ uiMeshIndex ];
-	ai_assert( NULL != pObjMesh );
-
-	pMesh->mNumFaces = 0;
+    if( !pObjMesh ) {
+        return NULL;
+    }
+    ai_assert( NULL != pObjMesh );
+    aiMesh* pMesh = new aiMesh;
 	for (size_t index = 0; index < pObjMesh->m_Faces.size(); index++)
 	{
 		ObjFile::Face* const inp = pObjMesh->m_Faces[ index ];
@@ -281,16 +289,14 @@ void ObjFileImporter::createTopology(const ObjFile::Model* pModel,
 		if (inp->m_PrimitiveType == aiPrimitiveType_LINE) {
 			pMesh->mNumFaces += inp->m_pVertices->size() - 1;
 			pMesh->mPrimitiveTypes |= aiPrimitiveType_LINE;
-		}
-		else if (inp->m_PrimitiveType == aiPrimitiveType_POINT) {
+		} else if (inp->m_PrimitiveType == aiPrimitiveType_POINT) {
 			pMesh->mNumFaces += inp->m_pVertices->size();
 			pMesh->mPrimitiveTypes |= aiPrimitiveType_POINT;
 		} else {
 			++pMesh->mNumFaces;
 			if (inp->m_pVertices->size() > 3) {
 				pMesh->mPrimitiveTypes |= aiPrimitiveType_POLYGON;
-			}
-			else {
+			} else {
 				pMesh->mPrimitiveTypes |= aiPrimitiveType_TRIANGLE;
 			}
 		}
@@ -339,6 +345,8 @@ void ObjFileImporter::createTopology(const ObjFile::Model* pModel,
 
 	// Create mesh vertices
 	createVertexArray(pModel, pData, uiMeshIndex, pMesh, uiIdxCount);
+
+    return pMesh;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -407,21 +415,12 @@ void ObjFileImporter::createVertexArray(const ObjFile::Model* pModel,
 			{
 				const unsigned int tex = pSourceFace->m_pTexturCoords->at( vertexIndex );
 				ai_assert( tex < pModel->m_TextureCoord.size() );
+					
+				if ( tex >= pModel->m_TextureCoord.size() )
+					throw DeadlyImportError("OBJ: texture coordinate index out of range");
 
-				if ( tex >= pModel->m_TextureCoord.size() ){
-					//	throw DeadlyImportError("OBJ: texture coordinate index out of range");
-					DefaultLogger::get()->debug("OBJ: texture coordinate index out of range, data is hidden in the normales?");
-					if ( tex >= pModel->m_Normals.size() ){
-						DefaultLogger::get()->debug("OBJ: texture coordinates seems to be wrong calculated by your exporter?");
-						// pMesh->mTextureCoords[ 0 ][ newIndex ] = aiVector3D( 0, 0, 0 );
-					} else {
-						const aiVector3D &coord3d = pModel->m_Normals[ tex ];
-						pMesh->mTextureCoords[ 0 ][ newIndex ] = aiVector3D( coord3d.x, coord3d.y, 0 /*coord3d.z*/ );
-					}
-				} else {
-					const aiVector3D &coord3d = pModel->m_TextureCoord[ tex ];
-					pMesh->mTextureCoords[ 0 ][ newIndex ] = aiVector3D( coord3d.x, coord3d.y, coord3d.z );
-				}
+				const aiVector3D &coord3d = pModel->m_TextureCoord[ tex ];
+                pMesh->mTextureCoords[ 0 ][ newIndex ] = aiVector3D( coord3d.x, coord3d.y, coord3d.z );
 			}
 
 			ai_assert( pMesh->mNumVertices > newIndex );
@@ -552,8 +551,8 @@ void ObjFileImporter::createMaterials(const ObjFile::Model* pModel, aiScene* pSc
 	
 		mat->AddProperty<int>( &sm, 1, AI_MATKEY_SHADING_MODEL);
 
-		// mtl max value is 1000, opengl has 128...
-		pCurrentMaterial->shineness *= .128f;
+		// multiplying the specular exponent with 2 seems to yield better results
+		pCurrentMaterial->shineness *= 4.f;
 
 		// Adding material colors
 		mat->AddProperty( &pCurrentMaterial->ambient, 1, AI_MATKEY_COLOR_AMBIENT );
