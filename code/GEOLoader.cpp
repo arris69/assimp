@@ -119,7 +119,7 @@ static const aiImporterDesc desc = {
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 GEOImporter::GEOImporter() :
-		pScene(0), rgbH(false), tempPositions(0), tempColors(0) {
+		rgbH(false), pScene(0), tempPositions(0), tempColors(0) {
 }
 
 // ------------------------------------------------------------------------------------------------
