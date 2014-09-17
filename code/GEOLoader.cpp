@@ -48,52 +48,8 @@
 
 // internal headers
 #include "GEOLoader.h"
-#include "ParsingUtils.h"
-#include "fast_atof.h"
-
-#include "TinyFormatter.h"
-
-#include "GEOColorTable.h"
 
 using namespace Assimp;
-
-// helper macro to determine the size of an array
-#if (!defined ARRAYSIZE)
-#	define ARRAYSIZE(_array) (int(sizeof(_array) / sizeof(_array[0])))
-#endif
-
-#if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER) /* TODO: more sense here... */
-//#	define snprintf _snprintf
-//#	define vsnprintf _vsnprintf
-//#	define strcasecmp _stricmp
-//#	define strncasecmp _strnicmp
-/*
- Windows: stricmp()
- warning: implicit declaration of function ‘_stricmp’
- */
-const char *strcasestr(const char *arg1, const char *arg2) {
-	const char *a, *b;
-
-	for(;*arg1;*arg1++) {
-		a = arg1;
-		b = arg2;
-		while((*a++ | 32) == (*b++ | 32))
-		if(!*b)
-		return (arg1);
-	}
-	return(NULL);
-}
-/*
- Borland: strcmpi()
- */
-int strcasecmp(const char *s1, const char *s2) {
-	while(*s1 != 0 && tolower(*s1) == tolower(*s2)) {
-		++s1;
-		++s2;
-	}
-	return (*s2 == 0) ? (*s1 != 0) : (*s1 == 0) ? -1 : (tolower(*s1) - tolower(*s2));
-}
-#endif
 
 // *INDENT-OFF*
 // @formatter:off

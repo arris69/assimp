@@ -44,10 +44,7 @@
 #ifndef AI_GEOLOADER_H_INCLUDED
 #define AI_GEOLOADER_H_INCLUDED
 
-#include "BaseImporter.h"
-#include "assimp/ProgressHandler.hpp"
-#include "assimp/types.h"
-#include <vector>
+#include "GEOHelper.h"
 
 namespace Assimp {
 
