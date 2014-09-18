@@ -565,7 +565,10 @@ void LWOImporter::LoadLWO2ImageMap(unsigned int size, LWO::Texture& tex )
 // ------------------------------------------------------------------------------------------------
 void LWOImporter::LoadLWO2Procedural(unsigned int /*size*/, LWO::Texture& tex )
 {
-	// --- not supported at the moment
+	// --- not supported at the moment 
+	// There are two basic procedural textures (wall and dirt)?
+	// https://github.com/id-Software/DOOM-3/blob/master/neo/renderer/Model_lwo.h
+	// https://github.com/id-Software/DOOM-3/blob/master/neo/renderer/Model_lwo.cpp -> lwGetProcedural
 	DefaultLogger::get()->error("LWO2: Found procedural texture, this is not supported");
 	tex.bCanUse = false;
 }
@@ -574,6 +577,7 @@ void LWOImporter::LoadLWO2Procedural(unsigned int /*size*/, LWO::Texture& tex )
 void LWOImporter::LoadLWO2Gradient(unsigned int /*size*/, LWO::Texture& tex  )
 {
 	// --- not supported at the moment
+	// https://github.com/id-Software/DOOM-3/blob/master/neo/renderer/Model_lwo.cpp -> lwGetGradient
 	DefaultLogger::get()->error("LWO2: Found gradient texture, this is not supported");
 	tex.bCanUse = false;
 }
