@@ -174,6 +174,8 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 		GetNextLine(buffer, line); // skip the signature line and comment lines (#...)
 	}
 
+	progress->UpdateFileRead(1, 5);
+
 	sz = line;
 
 	const unsigned int numElementsToImport = strtoul10(sz, &sz);
@@ -195,7 +197,10 @@ void GEOImporter::InternReadFile(const std::string& pFile, aiScene* pScene,
 	else
 		throw DeadlyImportError("GEO: Never see me, bug in assimp's api design.");
 
-const char* old = buffer;
+	progress->UpdateFileRead(2, 5);
+
+	const char* old = buffer;
+
 	if ((flav == Mesh_with_coloured_faces)
 			| (flav == Mesh_with_coloured_vertices)) {
 		// First find out how many vertices we'll need
@@ -212,8 +217,6 @@ const char* old = buffer;
 			faces++;
 		}
 
-		progress->Update(.25f);
-
 		if (!mesh->mNumVertices)
 			throw DeadlyImportError("GEO: There are no valid faces");
 
@@ -229,6 +232,8 @@ const char* old = buffer;
 	buffer = old;
 	faces = mesh->mFaces;
 
+	progress->UpdateFileRead(3, 5);
+
 	if (flav != Lamp && flav != Gouraud_curves_or_NURBS_surfaces) {
 
 		// import faces:
@@ -237,12 +242,14 @@ const char* old = buffer;
 		else /*if (flav == Mesh_with_coloured_vertices)*/
 			InternReadncF(mesh->mNumFaces); // mesh colored vertices
 	}
+
+	progress->UpdateFileRead(4, 5);
+
 	InternReadFinish();
 }
 
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::InternReadLamp(unsigned int count) {
-	progress->Update(.125f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " light(s)"));
 
@@ -308,7 +315,6 @@ void GEOImporter::InternReadLamp(unsigned int count) {
 		pScene->mLights[pScene->mNumLights] = tmpLight;
 		pScene->mNumLights++;
 	}
-	progress->Update(.24f);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -323,7 +329,6 @@ void GEOImporter::InternReadFbS(unsigned int count) {
 
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::InternReadcV(unsigned int count) {
-	progress->Update(.125f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " colored vertex/vertices"));
 
@@ -349,12 +354,10 @@ void GEOImporter::InternReadcV(unsigned int count) {
 
 		InternReadColor(i);
 	}
-	progress->Update(.24f);
 }
 
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::InternReadncV(unsigned int count) {
-	progress->Update(.125f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " not colored vertex/vertices"));
 
@@ -376,12 +379,10 @@ void GEOImporter::InternReadncV(unsigned int count) {
 		SkipSpaces(&sz);
 		fast_atoreal_move<float>(sz, (float&) v.z);
 	}
-	progress->Update(.24f);
 }
 
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::InternReadcF(unsigned int count) {
-	progress->Update(.25f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " colored face(s)"));
 
@@ -419,15 +420,10 @@ void GEOImporter::InternReadcF(unsigned int count) {
 		faces++;
 		// TODO: face mesh material handling
 	}
-	if(count)
-		--faces;
-
-	progress->Update(.45f);
 }
 
 // ------------------------------------------------------------------------------------------------
 void GEOImporter::InternReadncF(unsigned int count) {
-	progress->Update(.25f);
 	DefaultLogger::get()->debug(
 			(Formatter::format(), "GEO: Has to import ", count, " not colored face(s)"));
 
@@ -457,10 +453,6 @@ void GEOImporter::InternReadncF(unsigned int count) {
 		i++;
 		faces++;
 	}
-	if(count)
-		--faces;
-
-	progress->Update(.45f);
 }
 
 // ------------------------------------------------------------------------------------------------
