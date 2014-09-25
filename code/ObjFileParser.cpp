@@ -193,12 +193,12 @@ void ObjFileParser::copyNextWord(char *pBuffer, size_t length)
 {
 	size_t index = 0;
 	m_DataIt = getNextWord<DataArrayIt>(m_DataIt, m_DataItEnd);
-	while ( m_DataIt != m_DataItEnd && !isSeparator(*m_DataIt) )
-	{
+    while( m_DataIt != m_DataItEnd && !IsSpaceOrNewLine( *m_DataIt ) ) {
 		pBuffer[index] = *m_DataIt;
 		index++;
-		if (index == length-1)
-			break;
+        if( index == length - 1 ) {
+            break;
+        }
 		++m_DataIt;
 	}
 
@@ -352,7 +352,7 @@ void ObjFileParser::getFace(aiPrimitiveType type)
 			}
 			iPos++;
 		}
-		else if ( isSeparator(*pPtr) )
+        else if( IsSpaceOrNewLine( *pPtr ) )
 		{
 			iPos = 0;
 		}
@@ -470,8 +470,9 @@ void ObjFileParser::getMaterialDesc()
 		return;
 
 	char *pStart = &(*m_DataIt);
-	while ( m_DataIt != m_DataItEnd && !isSeparator(*m_DataIt) )
-		++m_DataIt;
+    while( m_DataIt != m_DataItEnd && !IsSpaceOrNewLine( *m_DataIt ) ) {
+        ++m_DataIt;
+    }
 
 	// Get name
 	std::string strName(pStart, &(*m_DataIt));
@@ -538,12 +539,14 @@ void ObjFileParser::getMaterialLib()
 {
 	// Translate tuple
 	m_DataIt = getNextToken<DataArrayIt>(m_DataIt, m_DataItEnd);
-	if (m_DataIt ==  m_DataItEnd)
-		return;
+    if( m_DataIt == m_DataItEnd ) {
+        return;
+    }
 	
 	char *pStart = &(*m_DataIt);
-	while (m_DataIt != m_DataItEnd && !isNewLine(*m_DataIt))
-		m_DataIt++;
+    while( m_DataIt != m_DataItEnd && !IsLineEnd( *m_DataIt ) ) {
+        ++m_DataIt;
+    }
 
 /* remove trailing spaces, maybe for some static/inline function */
 /*
@@ -612,7 +615,7 @@ void ObjFileParser::getNewMaterial()
 
 	char *pStart = &(*m_DataIt);
 	std::string strMat( pStart, *m_DataIt );
-    while( m_DataIt != m_DataItEnd && isSeparator( *m_DataIt ) ) {
+    while( m_DataIt != m_DataItEnd && IsSpaceOrNewLine( *m_DataIt ) ) {
         ++m_DataIt;
     }
 	std::map<std::string, ObjFile::Material*>::iterator it = m_pModel->m_MaterialMap.find( strMat );
@@ -766,7 +769,7 @@ void ObjFileParser::getObjectName()
         return;
     }
 	char *pStart = &(*m_DataIt);
-    while( m_DataIt != m_DataItEnd && !isSeparator( *m_DataIt ) ) {
+    while( m_DataIt != m_DataItEnd && !IsSpaceOrNewLine( *m_DataIt ) ) {
         ++m_DataIt;
     }
 
