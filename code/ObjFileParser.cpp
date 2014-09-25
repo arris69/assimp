@@ -719,7 +719,7 @@ void ObjFileParser::reselectGroup()
 		return;
 	}
 	char *pStart = &(*m_DataIt);
-	while( m_DataIt != m_DataItEnd && !isSeparator( *m_DataIt ) ) {
+	while( m_DataIt != m_DataItEnd && !IsSpaceOrNewLine( *m_DataIt ) ) {
 		++m_DataIt;
 	}
 
