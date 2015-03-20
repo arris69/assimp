@@ -14,5 +14,5 @@ before_script:
 
 # Change this to your needs
 script:
-  - ant -v package 
+  - find / -name "*android*"
 
