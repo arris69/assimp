@@ -9,7 +9,10 @@ env:
   global:
     - PV=r8e PLATF=linux-x86_64 NDK_HOME=${TRAVIS_BUILD_DIR}/android-ndk-${PV} PATH=${PATH}:${NDK_HOME}
 
+before_script:
+  - cd port/jassimp
+
 # Change this to your needs
 script:
-  - java 
+  - ant -v build
 
