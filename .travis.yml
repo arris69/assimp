@@ -5,9 +5,9 @@ before_install:
   - if [ $LINUX ]; then sudo apt-get install -qq freeglut3-dev libxmu-dev libxi-dev ; fi
   - echo -e "#ifndef A_R_H_INC\n#define A_R_H_INC\n#define GitVersion ${TRAVIS_JOB_ID}\n#define GitBranch \"${TRAVIS_BRANCH}\"\n#endif // A_R_H_INC" > revision.h
 
-branches:
-  only:
-    - master
+#branches:
+#  only:
+#    - master
 
 env:
   global:
