@@ -3,6 +3,7 @@ SET(CMAKE_SYSTEM_NAME Windows)
 
 # first try with minimalistic settings 
 set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
+set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
 
 ## where is the target environment
 SET(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
