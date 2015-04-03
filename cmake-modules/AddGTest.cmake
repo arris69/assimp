@@ -16,6 +16,7 @@ else()
 endif()
 
 set(GTEST_CMAKE_ARGS
+	"-DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}"
 	"-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
 	"-Dgtest_force_shared_crt=ON"
 	"-Dgtest_disable_pthreads:BOOL=${DISABLE_PTHREADS}")
