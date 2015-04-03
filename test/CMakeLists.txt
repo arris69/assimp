@@ -9,7 +9,7 @@ INCLUDE_DIRECTORIES(
 
 # Add the temporary output directories to the library path to make sure the
 # Assimp library can be found, even if it is not installed system-wide yet.
-LINK_DIRECTORIES( ${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib )
+#LINK_DIRECTORIES( ${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib )
 
 SOURCE_GROUP( unit FILES
 	unit/CCompilerTest.c
@@ -53,8 +53,6 @@ add_executable( unit
 )
 
 SET_PROPERTY( TARGET assimp PROPERTY DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX} )
-
-set_target_properties(unit PROPERTIES LINK_FLAGS "-static")
 
 add_dependencies( unit gtest )
 target_link_libraries( unit assimp
