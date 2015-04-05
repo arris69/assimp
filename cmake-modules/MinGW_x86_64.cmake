@@ -11,15 +11,15 @@ SET(CMAKE_SYSTEM_NAME Windows)
 #SET(CMAKE_RC_COMPILER "/usr/bin/x86_64-w64-mingw32-windres")
 
 
-## extreme way of settings...
-## which C and C++ compiler to use
+# extreme way of settings...
+# which C and C++ compiler to use
 SET(_CMAKE_TOOLCHAIN_PREFIX "x86_64-w64-mingw32-")
 SET(CMAKE_RC_COMPILER "${_CMAKE_TOOLCHAIN_PREFIX}windres")
 
-## specify the force cross compiler else compiler-test fails.
-## strange thing that compiler ID is ignored???
-#CMAKE_FORCE_C_COMPILER(${_CMAKE_TOOLCHAIN_PREFIX}gcc MinGW)
-#CMAKE_FORCE_CXX_COMPILER(${_CMAKE_TOOLCHAIN_PREFIX}g++ MinGW)
+# specify the force cross compiler else compiler-test fails.
+# strange thing that compiler ID is ignored???
+CMAKE_FORCE_C_COMPILER(${_CMAKE_TOOLCHAIN_PREFIX}gcc MinGW)
+CMAKE_FORCE_CXX_COMPILER(${_CMAKE_TOOLCHAIN_PREFIX}g++ MinGW)
 
 # where is the target (so called staging) environment
 SET(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
