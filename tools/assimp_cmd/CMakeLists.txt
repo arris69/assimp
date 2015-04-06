@@ -27,7 +27,7 @@ if(MINGW)
         #second try...
         #Set Linker flags, TODO: check CMAKE_SHARED_LIBS and maybe add "-static" too.
         SET_TARGET_PROPERTIES(assimp PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
-        SET_TARGET_PROPERTIES(assimp_cmd PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
+        SET_TARGET_PROPERTIES(assimp_cmd PROPERTIES LINK_FLAGS "-static-libstdc++")
 endif(MINGW)
 
 IF( WIN32 )
