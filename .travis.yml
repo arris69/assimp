@@ -44,6 +44,11 @@ script:
     cmake -G "Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=YES -DBUILD_SHARED_LIBS=$SHARED_BUILD -DCMAKE_TOOLCHAIN_FILE=cmake-modules/MinGW_x86_64.cmake -DASSIMP_ENABLE_BOOST_WORKAROUND=YES -DCMAKE_C_PLATFORM_ID=MinGW -DCMAKE_COMPILER_IS_MINGW=YES -DMINGW=YES;
     echo "cmake -G \"Unix Makefiles\" -DCMAKE_VERBOSE_MAKEFILE=YES -DBUILD_SHARED_LIBS=$SHARED_BUILD -DCMAKE_TOOLCHAIN_FILE=cmake-modules/MinGW_x86_64.cmake -DASSIMP_ENABLE_BOOST_WORKAROUND=YES -DCMAKE_C_PLATFORM_ID=MinGW -DCMAKE_COMPILER_IS_MINGW=YES -DMINGW=YES" ;
     cmake --build . ;
+    find -name "*.exe" -or -name "*.dll*" -exec file {} ";" ;
+    find -name "*.exe" -or -name "*.dll*" -exec ls -l {} ";" ;
+    find -name "assimp.exe" -exec wine {} info ${TRAVIS_BUILD_DIR}/test/models-nonbsd/B3D/dwarf2.b3d ";" ;
+    elif [ $RESERVED ]; then
+    echo "Reserved condition" ;
     else
     cmake -G "Unix Makefiles" -DASSIMP_ENABLE_BOOST_WORKAROUND=YES -DASSIMP_NO_EXPORT=$TRAVIS_NO_EXPORT -STATIC_BUILD=$TRAVIS_STATIC_BUILD ;
     make ;
