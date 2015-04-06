@@ -54,8 +54,6 @@ add_executable( unit
 
 SET_PROPERTY( TARGET assimp PROPERTY DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX} )
 
-set_target_properties(unit PROPERTIES LINK_FLAGS "-static")
-
 add_dependencies( unit gtest )
 target_link_libraries( unit assimp
 	debug ${GTEST_DEBUG_LIBRARIES}
