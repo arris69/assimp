@@ -13,7 +13,7 @@ set(ASSIMP_PACKAGE_VERSION "0" CACHE STRING "the package-specific version used f
 
 add_definitions( -DOPENDDL_NO_USE_CPP11 )
 
-if(NOT CMAKE_SHARED_LIBS)
+if(NOT BUILD_SHARED_LIBS)
 #if(MINGW)
 #        # for MinGW:
         SET(CMAKE_EXE_LINKER_FLAGS "-static")
