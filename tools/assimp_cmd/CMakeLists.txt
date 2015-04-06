@@ -22,12 +22,13 @@ ADD_EXECUTABLE( assimp_cmd
 SET_PROPERTY(TARGET assimp_cmd PROPERTY DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 
 if(MINGW)
-        # for MinGW:
-        #SET(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
-        #second try...
-        #Set Linker flags, TODO: check CMAKE_SHARED_LIBS and maybe add "-static" too.
-        SET_TARGET_PROPERTIES(assimp PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
-        SET_TARGET_PROPERTIES(assimp_cmd PROPERTIES LINK_FLAGS "-static-libstdc++")
+#        # for MinGW:
+        SET(CMAKE_EXE_LINKER_FLAGS "-static")
+#        #SET(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+#        #second try...
+#        #Set Linker flags, TODO: check CMAKE_SHARED_LIBS and maybe add "-static" too.
+#        SET_TARGET_PROPERTIES(assimp PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
+#        SET_TARGET_PROPERTIES(assimp_cmd PROPERTIES LINK_FLAGS "-static-libstdc++")
 endif(MINGW)
 
 IF( WIN32 )
