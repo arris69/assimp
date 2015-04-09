@@ -19,17 +19,6 @@ set(ASSIMP_PACKAGE_VERSION "0" CACHE STRING "the package-specific version used f
 
 add_definitions( -DOPENDDL_NO_USE_CPP11 )
 
-if(NOT BUILD_SHARED_LIBS)
-#if(MINGW)
-#        # for MinGW:
-        SET(CMAKE_EXE_LINKER_FLAGS "-static")
-#        #SET(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
-#        #second try...
-#        #Set Linker flags, TODO: check CMAKE_SHARED_LIBS and maybe add "-static" too.
-#        SET_TARGET_PROPERTIES(assimp PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
-#        SET_TARGET_PROPERTIES(assimp_cmd PROPERTIES LINK_FLAGS "-static-libstdc++")
-endif()
-
 # Get the current working branch
 execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
