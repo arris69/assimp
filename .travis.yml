@@ -43,7 +43,8 @@ script:
     cmake -G "Unix Makefiles" -DCMAKE_VERBOSE_MAKEFILE=YES -DBUILD_SHARED_LIBS=$SHARED_BUILD -DASSIMP_BUILD_TESTS=OFF -DCMAKE_TOOLCHAIN_FILE=cmake-modules/MinGW_x86_64.cmake ;
     echo "cmake -G \"Unix Makefiles\" -DCMAKE_VERBOSE_MAKEFILE=YES -DBUILD_SHARED_LIBS=$SHARED_BUILD -DCMAKE_TOOLCHAIN_FILE=cmake-modules/MinGW_x86_64.cmake -DASSIMP_ENABLE_BOOST_WORKAROUND=YES -DCMAKE_C_PLATFORM_ID=MinGW -DCMAKE_COMPILER_IS_MINGW=YES -DMINGW=YES" ;
     cmake --build . ;
-    make install
+    make install ;
+    echo "Initialize Wine: $(wine)" ;
     find -regex ".*\.\(exe\|dll\)" -exec file {} ";" ;
     find -regex ".*\.\(exe\|dll\)" -exec ls -l {} ";" ;
     echo 'find -name "assimp.exe" -exec wine {} info ${TRAVIS_BUILD_DIR}/test/models-nonbsd/B3D/dwarf2.b3d ";"' ;
