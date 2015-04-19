@@ -50,6 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "assimp/Exporter.hpp"
 #include <boost/scoped_ptr.hpp>
 
+#include "qnan.h"
 #include "Exceptional.h"
 #include "PlyExporter.h"
 
