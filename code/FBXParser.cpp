@@ -41,7 +41,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file  FBXParser.cpp
  *  @brief Implementation of the FBX parser and the rudimentary DOM that we use
  */
-#include "AssimpPCH.h"
 
 #ifndef ASSIMP_BUILD_NO_FBX_IMPORTER
 
@@ -59,6 +58,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ParsingUtils.h"
 #include "fast_atof.h"
+#include <boost/foreach.hpp>
+#include "ByteSwap.h"
 
 using namespace Assimp;
 using namespace Assimp::FBX;
@@ -68,13 +69,15 @@ namespace {
 
 	// ------------------------------------------------------------------------------------------------
 	// signal parse error, this is always unrecoverable. Throws DeadlyImportError.
-	void ParseError(const std::string& message, const Token& token)
+	AI_WONT_RETURN void ParseError(const std::string& message, const Token& token) AI_WONT_RETURN_SUFFIX;
+	AI_WONT_RETURN void ParseError(const std::string& message, const Token& token)
 	{
 		throw DeadlyImportError(Util::AddTokenText("FBX-Parser",message,&token));
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void ParseError(const std::string& message, const Element* element = NULL)
+	AI_WONT_RETURN void ParseError(const std::string& message, const Element* element = NULL) AI_WONT_RETURN_SUFFIX;
+	AI_WONT_RETURN void ParseError(const std::string& message, const Element* element)
 	{
 		if(element) {
 			ParseError(message,element->KeyToken());
@@ -428,6 +431,43 @@ int ParseTokenAsInt(const Token& t, const char*& err_out)
 	return intval;
 }
 
+
+// ------------------------------------------------------------------------------------------------
+int64_t ParseTokenAsInt64(const Token& t, const char*& err_out)
+{
+	err_out = NULL;
+
+	if (t.Type() != TokenType_DATA) {
+		err_out = "expected TOK_DATA token";
+		return 0L;
+	}
+
+	if (t.IsBinary())
+	{
+		const char* data = t.begin();
+		if (data[0] != 'L') {
+			err_out = "failed to parse Int64, unexpected data type";
+			return 0L;
+		}
+
+		BE_NCONST int64_t id = SafeParse<int64_t>(data + 1, t.end());
+		AI_SWAP8(id);
+		return id;
+	}
+
+	// XXX: should use size_t here
+	unsigned int length = static_cast<unsigned int>(t.end() - t.begin());
+	ai_assert(length > 0);
+
+	const char* out;
+	const int64_t id = strtol10_64(t.begin(), &out, &length);
+	if (out > t.end()) {
+		err_out = "failed to parse Int64 (text)";
+		return 0L;
+	}
+
+	return id;
+}
 
 // ------------------------------------------------------------------------------------------------
 std::string ParseTokenAsString(const Token& t, const char*& err_out)
@@ -1060,6 +1100,63 @@ void ParseVectorDataArray(std::vector<uint64_t>& out, const Element& el)
 	}
 }
 
+// ------------------------------------------------------------------------------------------------
+// read an array of int64_ts
+void ParseVectorDataArray(std::vector<int64_t>& out, const Element& el)
+{
+	out.clear();
+	const TokenList& tok = el.Tokens();
+	if (tok.empty()) {
+		ParseError("unexpected empty element", &el);
+	}
+
+	if (tok[0]->IsBinary()) {
+		const char* data = tok[0]->begin(), *end = tok[0]->end();
+
+		char type;
+		uint32_t count;
+		ReadBinaryDataArrayHead(data, end, type, count, el);
+
+		if (!count) {
+			return;
+		}
+
+		if (type != 'l') {
+			ParseError("expected long array (binary)", &el);
+		}
+
+		std::vector<char> buff;
+		ReadBinaryDataArray(type, count, data, end, buff, el);
+
+		ai_assert(data == end);
+		ai_assert(buff.size() == count * 8);
+
+		out.reserve(count);
+
+		const int64_t* ip = reinterpret_cast<const int64_t*>(&buff[0]);
+		for (unsigned int i = 0; i < count; ++i, ++ip) {
+			BE_NCONST int64_t val = *ip;
+			AI_SWAP8(val);
+			out.push_back(val);
+		}
+
+		return;
+	}
+
+	const size_t dim = ParseTokenAsDim(*tok[0]);
+
+	// see notes in ParseVectorDataArray()
+	out.reserve(dim);
+
+	const Scope& scope = GetRequiredScope(el);
+	const Element& a = GetRequiredElement(scope, "a", &el);
+
+	for (TokenList::const_iterator it = a.Tokens().begin(), end = a.Tokens().end(); it != end;) {
+		const int64_t ival = ParseTokenAsInt64(**it++);
+
+		out.push_back(ival);
+	}
+}
 
 // ------------------------------------------------------------------------------------------------
 aiMatrix4x4 ReadMatrix(const Element& element)
@@ -1202,6 +1299,18 @@ int ParseTokenAsInt(const Token& t)
 }
 
 
+
+// ------------------------------------------------------------------------------------------------
+// wrapper around ParseTokenAsInt64() with ParseError handling
+int64_t ParseTokenAsInt64(const Token& t)
+{
+	const char* err;
+	const int64_t i = ParseTokenAsInt64(t, err);
+	if (err) {
+		ParseError(err, t);
+	}
+	return i;
+}
 
 } // !FBX
 } // !Assimp

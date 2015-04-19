@@ -41,18 +41,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /** @file Implementation of the Collada loader */
 
-#include "AssimpPCH.h"
+
 #ifndef ASSIMP_BUILD_NO_COLLADA_IMPORTER
 
 #include "../include/assimp/anim.h"
+#include "../include/assimp/scene.h"
 #include "ColladaLoader.h"
 #include "ColladaParser.h"
 
 #include "fast_atof.h"
 #include "ParsingUtils.h"
 #include "SkeletonMeshBuilder.h"
+#include "Defines.h"
 
 #include "time.h"
+#include <boost/foreach.hpp>
+#include "../include/assimp/DefaultLogger.hpp"
+#include "../include/assimp/Importer.hpp"
+#include <numeric>
+#include "Defines.h"
+
 
 using namespace Assimp;
 
@@ -176,7 +184,7 @@ void ColladaLoader::InternReadFile( const std::string& pFile, aiScene* pScene, I
 				 0,  0,  1,  0,
 				 0, -1,  0,  0,
 				 0,  0,  0,  1);
-        }
+		}
 	// store all meshes
 	StoreSceneMeshes( pScene);
 
@@ -1379,7 +1387,7 @@ void ColladaLoader::BuildMaterials( ColladaParser& pParser, aiScene* /*pScene*/)
 
 		// create material
 		aiMaterial* mat = new aiMaterial;
-		aiString name( matIt->first);
+		aiString name( material.mName.empty() ? matIt->first : material.mName );
 		mat->AddProperty(&name,AI_MATKEY_NAME);
 
 		// store the material

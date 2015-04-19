@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------------------
 */
 
-#include "AssimpPCH.h"
+
 
 #ifndef ASSIMP_BUILD_NO_EXPORT
 #ifndef ASSIMP_BUILD_NO_COLLADA_EXPORTER
@@ -46,9 +46,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Bitmap.h"
 #include "fast_atof.h"
-#include "SceneCombiner.h" 
+#include "SceneCombiner.h"
 #include "XMLTools.h"
+#include "../include/assimp/IOSystem.hpp"
+#include "../include/assimp/Exporter.hpp"
+#include "../include/assimp/scene.h"
 
+#include "Exceptional.h"
+
+#include <boost/scoped_ptr.hpp>
 #include <ctime>
 #include <set>
 
@@ -59,7 +65,7 @@ namespace Assimp
 
 // ------------------------------------------------------------------------------------------------
 // Worker function for exporting a scene to Collada. Prototyped and registered in Exporter.cpp
-void ExportSceneCollada(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene)
+void ExportSceneCollada(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties)
 {
 	std::string path = "";
 	std::string file = pFile;
@@ -452,7 +458,7 @@ void ColladaExporter::WriteMaterials()
 	  }
 	}
 
-	aiShadingMode shading;
+	aiShadingMode shading = aiShadingMode_Flat;
 	materials[a].shading_model = "phong";
 	if(mat->Get( AI_MATKEY_SHADING_MODEL, shading) == aiReturn_SUCCESS) {
 		if(shading == aiShadingMode_Phong) {
