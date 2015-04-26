@@ -95,15 +95,16 @@ ObjFileImporter::~ObjFileImporter()
 //	Returns true, if file is an obj file.
 bool ObjFileImporter::CanRead( const std::string& pFile, IOSystem*  pIOHandler , bool checkSig ) const
 {
-    if(!checkSig) //Check File Extension
-    {
-        return SimpleExtensionCheck(pFile,"obj");
-    }
-    else //Check file Header
-    {
-        static const char *pTokens[] = { "mtllib", "usemtl", "v ", "vt ", "vn ", "o ", "g ", "s ", "f " };
-        return BaseImporter::SearchFileHeaderForToken(pIOHandler, pFile, pTokens, 9 );
-    }
+	if(!checkSig) //Check File Extension
+	{
+		return SimpleExtensionCheck(pFile,"obj");
+	}
+
+	if(SimpleExtensionCheck(pFile,"obj")){
+		static const char *pTokens[] = { "mtllib", "usemtl", "v ", "vt ", "vn ", "o ", "g ", "s ", "f " };
+		return BaseImporter::SearchFileHeaderForToken(pIOHandler, pFile, pTokens, 9 );
+	} else
+		return false;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -129,7 +130,6 @@ void ObjFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene,
         throw DeadlyImportError( "OBJ-file is too small.");
     }
 
-<<<<<<< HEAD
 	// Allocate buffer and read file into it
 	TextFileToBuffer(file.get(),m_Buffer);
 
@@ -153,47 +153,6 @@ void ObjFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene,
 
 	// Clean up allocated storage for the next import 
 	m_Buffer.clear();
-=======
-    // Allocate buffer and read file into it
-    TextFileToBuffer(file.get(),m_Buffer);
-
-    // Get the model name
-    std::string  strModelName;
-    std::string::size_type pos = pFile.find_last_of( "\\/" );
-    if ( pos != std::string::npos )	
-    {
-        strModelName = pFile.substr(pos+1, pFile.size() - pos - 1);
-    }
-    else
-    {
-        strModelName = pFile;
-    }
-
-    // process all '\'
-    std::vector<char> ::iterator iter = m_Buffer.begin();
-    while (iter != m_Buffer.end())
-    {
-        if (*iter == '\\')
-        {
-            // remove '\'
-            iter = m_Buffer.erase(iter);
-            // remove next character
-            while (*iter == '\r' || *iter == '\n')
-                iter = m_Buffer.erase(iter);
-        }
-        else
-            ++iter;
-    }
-
-    // parse the file into a temporary representation
-    ObjFileParser parser(m_Buffer, strModelName, pIOHandler);
-
-    // And create the proper return structures out of it
-    CreateDataFromImport(parser.GetModel(), pScene);
-
-    // Clean up allocated storage for the next import 
-    m_Buffer.clear();
->>>>>>> upstream/master
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -391,7 +350,6 @@ void ObjFileImporter::createVertexArray(const ObjFile::Model* pModel,
                                         aiMesh* pMesh,
                                         unsigned int numIndices)
 {
-<<<<<<< HEAD
 	// Checking preconditions
 	ai_assert( NULL != pCurrentObject );
 	
@@ -405,7 +363,7 @@ void ObjFileImporter::createVertexArray(const ObjFile::Model* pModel,
 		return;
 
 	// Copy vertices of this mesh instance
-	pMesh->mNumVertices = uiIdxCount;
+	pMesh->mNumVertices = numIndices;
 	pMesh->mVertices = new aiVector3D[ pMesh->mNumVertices ];
 	
 	// Allocate buffer for normal vectors
@@ -514,121 +472,6 @@ void ObjFileImporter::createVertexArray(const ObjFile::Model* pModel,
 			++newIndex;
 		}
 	}	
-=======
-    // Checking preconditions
-    ai_assert( NULL != pCurrentObject );
-    
-    // Break, if no faces are stored in object
-    if ( pCurrentObject->m_Meshes.empty() )
-        return;
-
-    // Get current mesh
-    ObjFile::Mesh *pObjMesh = pModel->m_Meshes[ uiMeshIndex ];
-    if ( NULL == pObjMesh || pObjMesh->m_uiNumIndices < 1)
-        return;
-
-    // Copy vertices of this mesh instance
-    pMesh->mNumVertices = numIndices;
-    pMesh->mVertices = new aiVector3D[ pMesh->mNumVertices ];
-    
-    // Allocate buffer for normal vectors
-    if ( !pModel->m_Normals.empty() && pObjMesh->m_hasNormals )
-        pMesh->mNormals = new aiVector3D[ pMesh->mNumVertices ];
-    
-    // Allocate buffer for texture coordinates
-    if ( !pModel->m_TextureCoord.empty() && pObjMesh->m_uiUVCoordinates[0] )
-    {
-        pMesh->mNumUVComponents[ 0 ] = 2;
-        pMesh->mTextureCoords[ 0 ] = new aiVector3D[ pMesh->mNumVertices ];
-    }
-    
-    // Copy vertices, normals and textures into aiMesh instance
-    unsigned int newIndex = 0, outIndex = 0;
-    for ( size_t index=0; index < pObjMesh->m_Faces.size(); index++ )
-    {
-        // Get source face
-        ObjFile::Face *pSourceFace = pObjMesh->m_Faces[ index ]; 
-
-        // Copy all index arrays
-        for ( size_t vertexIndex = 0, outVertexIndex = 0; vertexIndex < pSourceFace->m_pVertices->size(); vertexIndex++ )
-        {
-            const unsigned int vertex = pSourceFace->m_pVertices->at( vertexIndex );
-            if ( vertex >= pModel->m_Vertices.size() ) 
-                throw DeadlyImportError( "OBJ: vertex index out of range" );
-            
-            pMesh->mVertices[ newIndex ] = pModel->m_Vertices[ vertex ];
-            
-            // Copy all normals 
-            if ( !pModel->m_Normals.empty() && vertexIndex < pSourceFace->m_pNormals->size())
-            {
-                const unsigned int normal = pSourceFace->m_pNormals->at( vertexIndex );
-                if ( normal >= pModel->m_Normals.size() )
-                    throw DeadlyImportError("OBJ: vertex normal index out of range");
-
-                pMesh->mNormals[ newIndex ] = pModel->m_Normals[ normal ];
-            }
-            
-            // Copy all texture coordinates
-            if ( !pModel->m_TextureCoord.empty() && vertexIndex < pSourceFace->m_pTexturCoords->size())
-            {
-                const unsigned int tex = pSourceFace->m_pTexturCoords->at( vertexIndex );
-                ai_assert( tex < pModel->m_TextureCoord.size() );
-                    
-                if ( tex >= pModel->m_TextureCoord.size() )
-                    throw DeadlyImportError("OBJ: texture coordinate index out of range");
-
-                const aiVector3D &coord3d = pModel->m_TextureCoord[ tex ];
-                pMesh->mTextureCoords[ 0 ][ newIndex ] = aiVector3D( coord3d.x, coord3d.y, coord3d.z );
-            }
-
-            ai_assert( pMesh->mNumVertices > newIndex );
-
-            // Get destination face
-            aiFace *pDestFace = &pMesh->mFaces[ outIndex ];
-
-            const bool last = ( vertexIndex == pSourceFace->m_pVertices->size() - 1 ); 
-            if (pSourceFace->m_PrimitiveType != aiPrimitiveType_LINE || !last) 
-            {
-                pDestFace->mIndices[ outVertexIndex ] = newIndex;
-                outVertexIndex++;
-            }
-
-            if (pSourceFace->m_PrimitiveType == aiPrimitiveType_POINT) 
-            {
-                outIndex++;
-                outVertexIndex = 0;
-            }
-            else if (pSourceFace->m_PrimitiveType == aiPrimitiveType_LINE) 
-            {
-                outVertexIndex = 0;
-
-                if(!last) 
-                    outIndex++;
-
-                if (vertexIndex) {
-                    if(!last) {
-                        pMesh->mVertices[ newIndex+1 ] = pMesh->mVertices[ newIndex ];
-                        if ( !pSourceFace->m_pNormals->empty() && !pModel->m_Normals.empty()) {
-                            pMesh->mNormals[ newIndex+1 ] = pMesh->mNormals[newIndex ];
-                        }
-                        if ( !pModel->m_TextureCoord.empty() ) {
-                            for ( size_t i=0; i < pMesh->GetNumUVChannels(); i++ ) {
-                                pMesh->mTextureCoords[ i ][ newIndex+1 ] = pMesh->mTextureCoords[ i ][ newIndex ];
-                            }
-                        }
-                        ++newIndex;
-                    }
-
-                    pDestFace[-1].mIndices[1] = newIndex;
-                }
-            }
-            else if (last) {
-                outIndex++;
-            }
-            ++newIndex;
-        }
-    }	
->>>>>>> upstream/master
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -664,7 +507,6 @@ void ObjFileImporter::addTextureMappingModeProperty(aiMaterial* mat, aiTextureTy
 //	Creates the material 
 void ObjFileImporter::createMaterials(const ObjFile::Model* pModel, aiScene* pScene )
 {
-<<<<<<< HEAD
 	ai_assert( NULL != pScene );
 	if ( NULL == pScene )
 		return;
@@ -808,151 +650,6 @@ void ObjFileImporter::createMaterials(const ObjFile::Model* pModel, aiScene* pSc
 	
 	// Test number of created materials.
 	ai_assert( pScene->mNumMaterials == numMaterials );
-=======
-    ai_assert( NULL != pScene );
-    if ( NULL == pScene )
-        return;
-
-    const unsigned int numMaterials = (unsigned int) pModel->m_MaterialLib.size();
-    pScene->mNumMaterials = 0;
-    if ( pModel->m_MaterialLib.empty() ) {
-        DefaultLogger::get()->debug("OBJ: no materials specified");
-        return;
-    }
-    
-    pScene->mMaterials = new aiMaterial*[ numMaterials ];
-    for ( unsigned int matIndex = 0; matIndex < numMaterials; matIndex++ )
-    {		
-        // Store material name
-        std::map<std::string, ObjFile::Material*>::const_iterator it;
-        it = pModel->m_MaterialMap.find( pModel->m_MaterialLib[ matIndex ] );
-        
-        // No material found, use the default material
-        if ( pModel->m_MaterialMap.end() == it )
-            continue;
-
-        aiMaterial* mat = new aiMaterial;
-        ObjFile::Material *pCurrentMaterial = (*it).second;
-        mat->AddProperty( &pCurrentMaterial->MaterialName, AI_MATKEY_NAME );
-
-        // convert illumination model
-        int sm = 0;
-        switch (pCurrentMaterial->illumination_model) 
-        {
-        case 0:
-            sm = aiShadingMode_NoShading;
-            break;
-        case 1:
-            sm = aiShadingMode_Gouraud;
-            break;
-        case 2:
-            sm = aiShadingMode_Phong;
-            break;
-        default:
-            sm = aiShadingMode_Gouraud;
-            DefaultLogger::get()->error("OBJ: unexpected illumination model (0-2 recognized)");
-        }
-    
-        mat->AddProperty<int>( &sm, 1, AI_MATKEY_SHADING_MODEL);
-
-        // multiplying the specular exponent with 2 seems to yield better results
-        pCurrentMaterial->shineness *= 4.f;
-
-        // Adding material colors
-        mat->AddProperty( &pCurrentMaterial->ambient, 1, AI_MATKEY_COLOR_AMBIENT );
-        mat->AddProperty( &pCurrentMaterial->diffuse, 1, AI_MATKEY_COLOR_DIFFUSE );
-        mat->AddProperty( &pCurrentMaterial->specular, 1, AI_MATKEY_COLOR_SPECULAR );
-        mat->AddProperty( &pCurrentMaterial->emissive, 1, AI_MATKEY_COLOR_EMISSIVE );
-        mat->AddProperty( &pCurrentMaterial->shineness, 1, AI_MATKEY_SHININESS );
-        mat->AddProperty( &pCurrentMaterial->alpha, 1, AI_MATKEY_OPACITY );
-
-        // Adding refraction index
-        mat->AddProperty( &pCurrentMaterial->ior, 1, AI_MATKEY_REFRACTI );
-
-        // Adding textures
-        if ( 0 != pCurrentMaterial->texture.length ) 
-        {
-            mat->AddProperty( &pCurrentMaterial->texture, AI_MATKEY_TEXTURE_DIFFUSE(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureDiffuseType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_DIFFUSE);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureAmbient.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureAmbient, AI_MATKEY_TEXTURE_AMBIENT(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureAmbientType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_AMBIENT);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureEmissive.length )
-            mat->AddProperty( &pCurrentMaterial->textureEmissive, AI_MATKEY_TEXTURE_EMISSIVE(0));
-
-        if ( 0 != pCurrentMaterial->textureSpecular.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureSpecular, AI_MATKEY_TEXTURE_SPECULAR(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureSpecularType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_SPECULAR);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureBump.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureBump, AI_MATKEY_TEXTURE_HEIGHT(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureBumpType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_HEIGHT);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureNormal.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureNormal, AI_MATKEY_TEXTURE_NORMALS(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureNormalType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_NORMALS);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureDisp.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureDisp, AI_MATKEY_TEXTURE_DISPLACEMENT(0) );
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureDispType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_DISPLACEMENT);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureOpacity.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureOpacity, AI_MATKEY_TEXTURE_OPACITY(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureOpacityType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_OPACITY);
-            }
-        }
-
-        if ( 0 != pCurrentMaterial->textureSpecularity.length )
-        {
-            mat->AddProperty( &pCurrentMaterial->textureSpecularity, AI_MATKEY_TEXTURE_SHININESS(0));
-            if (pCurrentMaterial->clamp[ObjFile::Material::TextureSpecularityType])
-            {
-                addTextureMappingModeProperty(mat, aiTextureType_SHININESS);
-            }
-        }
-        
-        // Store material property info in material array in scene
-        pScene->mMaterials[ pScene->mNumMaterials ] = mat;
-        pScene->mNumMaterials++;
-    }
-    
-    // Test number of created materials.
-    ai_assert( pScene->mNumMaterials == numMaterials );
->>>>>>> upstream/master
 }
 
 // ------------------------------------------------------------------------------------------------

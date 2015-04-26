@@ -71,18 +71,11 @@ ObjFileParser::ObjFileParser(std::vector<char> &Data,const std::string &strModel
 {
     std::fill_n(m_buffer,BUFFERSIZE,0);
 
-<<<<<<< HEAD
 	// Create the model instance to store all the data
 	m_pModel = new ObjFile::Model();
 	m_pModel->m_ModelName = strModelName;
 	m_ReselectMode = false;
 	
-=======
-    // Create the model instance to store all the data
-    m_pModel = new ObjFile::Model();
-    m_pModel->m_ModelName = strModelName;
-    
->>>>>>> upstream/master
     // create default material and store it
     m_pModel->m_pDefaultMaterial = new ObjFile::Material();
     m_pModel->m_pDefaultMaterial->MaterialName.Set( DEFAULT_MATERIAL );
@@ -129,7 +122,6 @@ void ObjFileParser::parseFile()
                     // read in texture coordinate ( 2D or 3D )
                                         ++m_DataIt;
                                         getVector( m_pModel->m_TextureCoord );
-<<<<<<< HEAD
 				} else if (*m_DataIt == 'n') {
 					// Read in normal vector definition
 					++m_DataIt;
@@ -199,71 +191,6 @@ void ObjFileParser::parseFile()
 			break;
 		}
 	}
-=======
-                } else if (*m_DataIt == 'n') {
-                    // Read in normal vector definition
-                    ++m_DataIt;
-                    getVector3( m_pModel->m_Normals );
-                }
-            }
-            break;
-
-        case 'p': // Parse a face, line or point statement
-        case 'l':
-        case 'f':
-            {
-                getFace(*m_DataIt == 'f' ? aiPrimitiveType_POLYGON : (*m_DataIt == 'l' 
-                    ? aiPrimitiveType_LINE : aiPrimitiveType_POINT));
-            }
-            break;
-
-        case '#': // Parse a comment
-            {
-                getComment();
-            }
-            break;
-
-        case 'u': // Parse a material desc. setter
-            {
-                getMaterialDesc();
-            }
-            break;
-
-        case 'm': // Parse a material library or merging group ('mg')
-            {
-                if (*(m_DataIt + 1) == 'g')
-                    getGroupNumberAndResolution();
-                else
-                    getMaterialLib();
-            }
-            break;
-
-        case 'g': // Parse group name
-            {
-                getGroupName();
-            }
-            break;
-
-        case 's': // Parse group number
-            {
-                getGroupNumber();
-            }
-            break;
-
-        case 'o': // Parse object name
-            {
-                getObjectName();
-            }
-            break;
-        
-        default:
-            {
-                m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
-            }
-            break;
-        }
-    }
->>>>>>> upstream/master
 }
 
 // -------------------------------------------------------------------
@@ -534,7 +461,6 @@ void ObjFileParser::getFace(aiPrimitiveType type)
 //	Get values for a new material description
 void ObjFileParser::getMaterialDesc()
 {
-<<<<<<< HEAD
 	// Each material request a new object.
 	// Sometimes the object is already created (see 'o' tag by example), but it is not initialized !
 	// So, we create a new object only if the current on is already initialized !
@@ -550,28 +476,10 @@ void ObjFileParser::getMaterialDesc()
 		return;
 
 	char *pStart = &(*m_DataIt);
-=======
-    // Each material request a new object.
-    // Sometimes the object is already created (see 'o' tag by example), but it is not initialized !
-    // So, we create a new object only if the current on is already initialized !
-    if (m_pModel->m_pCurrent != NULL &&
-        (	m_pModel->m_pCurrent->m_Meshes.size() > 1 ||
-            (m_pModel->m_pCurrent->m_Meshes.size() == 1 && m_pModel->m_Meshes[m_pModel->m_pCurrent->m_Meshes[0]]->m_Faces.size() != 0)	)
-        )
-        m_pModel->m_pCurrent = NULL;
-
-    // Get next data for material data
-    m_DataIt = getNextToken<DataArrayIt>(m_DataIt, m_DataItEnd);
-    if (m_DataIt == m_DataItEnd)
-        return;
-
-    char *pStart = &(*m_DataIt);
->>>>>>> upstream/master
     while( m_DataIt != m_DataItEnd && !IsSpaceOrNewLine( *m_DataIt ) ) {
         ++m_DataIt;
     }
 
-<<<<<<< HEAD
 	// Get name
 	std::string strName(pStart, &(*m_DataIt));
 	if ( strName.empty())
@@ -611,34 +519,6 @@ void ObjFileParser::getMaterialDesc()
 
 	// Skip rest of line
 	m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
-=======
-    // Get name
-    std::string strName(pStart, &(*m_DataIt));
-    if ( strName.empty())
-        return;
-
-    // Search for material
-    std::map<std::string, ObjFile::Material*>::iterator it = m_pModel->m_MaterialMap.find( strName );
-    if ( it == m_pModel->m_MaterialMap.end() )
-    {
-        // Not found, use default material
-        m_pModel->m_pCurrentMaterial = m_pModel->m_pDefaultMaterial;
-        DefaultLogger::get()->error("OBJ: failed to locate material " + strName + ", skipping");
-    }
-    else
-    {
-        // Found, using detected material
-        m_pModel->m_pCurrentMaterial = (*it).second;
-        if ( needsNewMesh( strName ))
-        {
-            createMesh();	
-        }
-        m_pModel->m_pCurrentMesh->m_uiMaterialIndex = getMaterialIndex( strName );
-    }
-
-    // Skip rest of line
-    m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
->>>>>>> upstream/master
 }
 
 // -------------------------------------------------------------------
@@ -674,7 +554,6 @@ void ObjFileParser::getMaterialLib()
         ++m_DataIt;
     }
 
-<<<<<<< HEAD
 /* remove trailing spaces, maybe for some static/inline function */
 /*
 	std::string whitespaces (" \t\f\v\n\r");
@@ -725,23 +604,6 @@ void ObjFileParser::getMaterialLib()
 	std::vector<char> buffer;
 	BaseImporter::TextFileToBuffer(pFile,buffer);
 	m_pIO->Close( pFile );
-=======
-    // Check for existence
-    const std::string strMatName(pStart, &(*m_DataIt));
-    IOStream *pFile = m_pIO->Open(strMatName);
-
-    if (!pFile )
-    {
-        DefaultLogger::get()->error("OBJ: Unable to locate material file " + strMatName);
-        m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
-        return;
-    }
-
-    // Import material library data from file
-    std::vector<char> buffer;
-    BaseImporter::TextFileToBuffer(pFile,buffer);
-    m_pIO->Close( pFile );
->>>>>>> upstream/master
 
     // Importing the material library 
     ObjFileMtlImporter mtlImporter( buffer, strMatName, m_pModel );			
