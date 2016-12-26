@@ -21,25 +21,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -----------------------------------------------------------------------------------------------*/
 #pragma once
-#ifndef OPENDDLPARSER_OPENDDLPARSERUTILS_H_INC
-#define OPENDDLPARSER_OPENDDLPARSERUTILS_H_INC
 
 #include <openddlparser/OpenDDLCommon.h>
 
 BEGIN_ODDLPARSER_NS
-
-template<class T>
-inline
-bool isComment( T *in, T *end ) {
-    if( *in == '/' ) {
-        if( in + 1 != end ) {
-            if( *( in + 1 ) == '/' ) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 
 template<class T>
 inline
@@ -53,8 +38,8 @@ bool isLowerCase( T in ) {
     return ( in >= 'a' && in <= 'z' );
 }
 
-template<class T> 
-inline 
+template<class T>
+inline
 bool isSpace( const T in ) {
     return ( ' ' == in || '\t' == in );
 }
@@ -68,7 +53,7 @@ bool isNewLine( const T in ) {
 template<class T>
 inline
 bool isSeparator( T in ) {
-    if( isSpace( in ) || ',' == in || '{' == in || '}' == in || '[' == in ) {
+    if( isSpace( in ) || ',' == in || '{' == in || '}' == in || '[' == in || '(' == in || ')' == in ) {
         return true;
     }
     return false;
@@ -85,7 +70,7 @@ static const unsigned char chartype_table[ 256 ] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 96-111
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 112-127
 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // > 127 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // > 127
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -99,12 +84,13 @@ static const unsigned char chartype_table[ 256 ] = {
 template<class T>
 inline
 bool isNumeric( const T in ) {
-    return ( in >= '0' && in <= '9' );
-    //return ( chartype_table[in] );
-    /*if (in >= '0' &&  in <= '9' )
-    return true;
+	return ( chartype_table[ static_cast<int>( in ) ] == 1 );
+}
 
-    return false;*/
+template<class T>
+inline
+bool isNotEndOfToken( T *in, T *end ) {
+    return ( '}' != *in && ',' != *in && !isSpace( *in ) && ')' != *in && in != end );
 }
 
 template<class T>
@@ -117,7 +103,7 @@ bool isInteger( T *in, T *end ) {
     }
 
     bool result( false );
-    while( '}' != *in && ',' != *in && !isSpace( *in ) && in != end ) {
+    while( isNotEndOfToken( in, end ) ) {
         result = isNumeric( *in );
         if( !result ) {
             break;
@@ -139,7 +125,7 @@ bool isFloat( T *in, T *end ) {
 
     // check for <1>.0f
     bool result( false );
-    while( !isSpace( *in ) && in != end ) {
+    while( isNotEndOfToken( in, end ) ) {
         if( *in == '.' ) {
             result = true;
             break;
@@ -159,7 +145,7 @@ bool isFloat( T *in, T *end ) {
     }
 
     // check for 1.<0>f
-    while( !isSpace( *in ) && in != end && *in != ',' ) {
+    while( isNotEndOfToken( in, end ) ) {
         result = isNumeric( *in );
         if( !result ) {
             return false;
@@ -234,7 +220,7 @@ int hex2Decimal( char in ) {
     if( isNumeric( in ) ) {
         return ( in - 48 );
     }
-    
+
     char hexCodeLower( 'a' ), hexCodeUpper( 'A' );
     for( int i = 0; i<16; i++ ) {
         if( in == hexCodeLower + i || in == hexCodeUpper + i ) {
@@ -245,6 +231,24 @@ int hex2Decimal( char in ) {
     return ErrorHex2Decimal;
 }
 
+template<class T>
+inline
+bool isComment( T *in, T *end ) {
+    if ( *in=='/' ) {
+        if ( in+1!=end ) {
+            if ( *( in+1 )=='/' ) {
+                char *drive( ( in+2 ) );
+                if ( (isUpperCase<T>( *drive )||isLowerCase<T>( *drive ))&&*( drive+1 )=='/' )  {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 END_ODDLPARSER_NS
 
-#endif // OPENDDLPARSER_OPENDDLPARSERUTILS_H_INC

@@ -3,12 +3,12 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2012, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
-Redistribution and use of this software in source and binary forms, 
-with or without modification, are permitted provided that the following 
+Redistribution and use of this software in source and binary forms,
+with or without modification, are permitted provided that the following
 conditions are met:
 
 * Redistributions of source code must retain the above
@@ -25,16 +25,16 @@ conditions are met:
   derived from this software without specific prior
   written permission of the assimp team.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
 OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 */
@@ -42,7 +42,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file Android extension of DefaultIOSystem using the standard C file functions */
 
 
-#include <code/AssimpPCH.h>
+#include <assimp/config.h>
+#include <android/api-level.h>
 #if __ANDROID__ and __ANDROID_API__ > 9 and defined(AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT)
 
 #include <stdlib.h>
@@ -50,6 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 #include <android/native_activity.h>
+#include <assimp/ai_assert.h>
 #include <assimp/port/AndroidJNI/AndroidJNIIOSystem.h>
 #include <code/DefaultIOStream.h>
 #include <fstream>
@@ -57,14 +59,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace Assimp;
 
 // ------------------------------------------------------------------------------------------------
-// Constructor. 
+// Constructor.
 AndroidJNIIOSystem::AndroidJNIIOSystem(ANativeActivity* activity)
 {
 	AndroidActivityInit(activity);
 }
 
 // ------------------------------------------------------------------------------------------------
-// Destructor. 
+// Destructor.
 AndroidJNIIOSystem::~AndroidJNIIOSystem()
 {
 	// nothing to do here
@@ -114,7 +116,7 @@ bool AndroidJNIIOSystem::AndroidExtractAsset(std::string name)
 	// Open file
 	AAsset* asset = AAssetManager_open(mApkAssetManager, name.c_str(),
 			AASSET_MODE_UNKNOWN);
-	std::string assetContent;
+	std::vector<char> assetContent;
 
 	if (asset != NULL) {
 		// Find size
@@ -138,7 +140,7 @@ bool AndroidJNIIOSystem::AndroidExtractAsset(std::string name)
 		}
 
 		// Write output buffer into a file
-		assetExtracted.write(assetContent.c_str(), strlen(assetContent.c_str()));
+		assetExtracted.write(&assetContent[0], assetContent.size());
 		assetExtracted.close();
 
 		__android_log_print(ANDROID_LOG_DEFAULT, "Assimp", "Asset extracted");
