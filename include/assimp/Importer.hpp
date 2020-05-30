@@ -3,7 +3,9 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2016, assimp team
+Copyright (c) 2006-2020, assimp team
+
+
 
 All rights reserved.
 
@@ -46,19 +48,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_ASSIMP_HPP_INC
 #define AI_ASSIMP_HPP_INC
 
+#ifdef __GNUC__
+#   pragma GCC system_header
+#endif
+
 #ifndef __cplusplus
 #   error This header requires C++ to be used. Use assimp.h for plain C.
 #endif // __cplusplus
 
 // Public ASSIMP data structures
 #include <assimp/types.h>
-#include <assimp/config.h>
 
-namespace Assimp    {
+namespace Assimp {
     // =======================================================================
     // Public interface to Assimp
     class Importer;
-    class Exporter; // export.hpp
     class IOStream;
     class IOSystem;
     class ProgressHandler;
@@ -77,7 +81,6 @@ namespace Assimp    {
     // =======================================================================
     // Holy stuff, only for members of the high council of the Jedi.
     class ImporterPimpl;
-    class ExporterPimpl; // export.hpp
 } //! namespace Assimp
 
 #define AI_PROPERTY_WAS_NOT_EXISTING 0xffffffff
@@ -138,7 +141,12 @@ public:
      * If this Importer owns a scene it won't be copied.
      * Call ReadFile() to start the import process.
      */
-    Importer(const Importer& other);
+    Importer(const Importer& other)=delete;
+
+    // -------------------------------------------------------------------
+    /** Assignment operator has been deleted
+     */
+    Importer &operator=(const Importer &) = delete;
 
     // -------------------------------------------------------------------
     /** Destructor. The object kept ownership of the imported data,
@@ -277,7 +285,7 @@ public:
      *  The return value remains valid until the property is modified.
      * @see GetPropertyInteger()
      */
-    const std::string GetPropertyString(const char* szName,
+    std::string GetPropertyString(const char* szName,
         const std::string& sErrorReturn = "") const;
 
     // -------------------------------------------------------------------
@@ -286,7 +294,7 @@ public:
      *  The return value remains valid until the property is modified.
      * @see GetPropertyInteger()
      */
-    const aiMatrix4x4 GetPropertyMatrix(const char* szName,
+    aiMatrix4x4 GetPropertyMatrix(const char* szName,
         const aiMatrix4x4& sErrorReturn = aiMatrix4x4()) const;
 
     // -------------------------------------------------------------------
@@ -326,7 +334,7 @@ public:
 
     // -------------------------------------------------------------------
     /** Supplies a custom progress handler to the importer. This
-     *  interface exposes a #Update() callback, which is called
+     *  interface exposes an #Update() callback, which is called
      *  more or less periodically (please don't sue us if it
      *  isn't as periodically as you'd like it to have ...).
      *  This can be used to implement progress bars and loading

@@ -1,7 +1,7 @@
 # Open Asset Import Library (assimp)
 # ----------------------------------------------------------------------
+# Copyright (c) 2006-2020, assimp team
 #
-# Copyright (c) 2006-2016, assimp team
 # All rights reserved.
 #
 # Redistribution and use of this software in source and binary forms,
@@ -33,16 +33,36 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
 #----------------------------------------------------------------------
-SET(CMAKE_LEGACY_CYGWIN_WIN32 0) # Remove when CMake >= 2.8.4 is required
-cmake_minimum_required( VERSION 2.8 )
-PROJECT( Assimp )
+SET(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
+
+CMAKE_MINIMUM_REQUIRED( VERSION 3.0 )
+
+# Toggles the use of the hunter package manager
+option(ASSIMP_HUNTER_ENABLED "Enable Hunter package manager support" OFF)
+
+IF(ASSIMP_HUNTER_ENABLED)
+  include("cmake/HunterGate.cmake")
+  HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.23.176.tar.gz"
+    SHA1 "2e9ae973d028660b735ac4c6142725ca36a0048a"
+  )
+
+  add_definitions(-DASSIMP_USE_HUNTER)
+ENDIF()
+
+PROJECT( Assimp VERSION 5.0.1 )
 
 # All supported options ###############################################
+
 OPTION( BUILD_SHARED_LIBS
   "Build package with shared libraries."
   ON
+)
+
+OPTION( ASSIMP_BUILD_FRAMEWORK
+  "Build package as Mac OS X Framework bundle."
+  OFF
 )
 OPTION( ASSIMP_DOUBLE_PRECISION
   "Set to ON to enable double precision processing"
@@ -64,11 +84,11 @@ OPTION( ASSIMP_BUILD_ZLIB
   "Build your own zlib"
   OFF
 )
-option( ASSIMP_BUILD_ASSIMP_TOOLS
+OPTION( ASSIMP_BUILD_ASSIMP_TOOLS
   "If the supplementary tools for Assimp are built in addition to the library."
   ON
 )
-option ( ASSIMP_BUILD_SAMPLES
+OPTION ( ASSIMP_BUILD_SAMPLES
   "If the official samples are built as well (needs Glut)."
   OFF
 )
@@ -77,117 +97,235 @@ OPTION ( ASSIMP_BUILD_TESTS
   ON
 )
 OPTION ( ASSIMP_COVERALLS
-   "Eańable this to measure test coverage."
+  "Enable this to measure test coverage."
+  OFF
+)
+OPTION( ASSIMP_INSTALL
+  "Disable this if you want to use assimp as a submodule."
+  ON
+)
+OPTION ( ASSIMP_ERROR_MAX
+  "Enable all warnings."
+  OFF
+)
+OPTION ( ASSIMP_ASAN
+  "Enable AddressSanitizer."
+  OFF
+)
+OPTION ( ASSIMP_UBSAN
+  "Enable Undefined Behavior sanitizer."
+  OFF
+)
+OPTION ( ASSIMP_SYSTEM_IRRXML
+  "Use system installed Irrlicht/IrrXML library."
+  OFF
+)
+OPTION ( ASSIMP_BUILD_DOCS
+  "Build documentation using Doxygen."
+  OFF
+)
+OPTION( ASSIMP_INJECT_DEBUG_POSTFIX
+  "Inject debug postfix in .a/.so/.dll lib names"
+  ON
+)
+
+OPTION ( ASSIMP_IGNORE_GIT_HASH
+   "Don't call git to get the hash."
    OFF
 )
 
+IF ( WIN32 )
+    OPTION ( ASSIMP_BUILD_ASSIMP_VIEW 
+      "If the Assimp view tool is built. (requires DirectX)" 
+      OFF )
+ENDIF()
+
+IF (IOS AND NOT ASSIMP_HUNTER_ENABLED)
+  IF (NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE "Release")
+  ENDIF ()
+  ADD_DEFINITIONS(-DENABLE_BITCODE)
+ENDIF ()
+
+# Use subset of Windows.h
+if (WIN32)
+  ADD_DEFINITIONS( -DWIN32_LEAN_AND_MEAN )
+endif()
+
 IF(MSVC)
-  set (CMAKE_PREFIX_PATH "D:\\libs\\devil")
   OPTION( ASSIMP_INSTALL_PDB
     "Install MSVC debug files."
     ON
   )
-ENDIF(MSVC)
+  IF(NOT (MSVC_VERSION LESS 1900))
+    # Multibyte character set is deprecated since at least MSVC2015 (possibly earlier)
+    ADD_DEFINITIONS( -DUNICODE -D_UNICODE )
+  ENDIF()
+ENDIF()
+
+IF (ASSIMP_BUILD_FRAMEWORK)
+  SET (BUILD_SHARED_LIBS ON)
+  MESSAGE(STATUS "Framework bundle building enabled")
+ENDIF()
 
 IF(NOT BUILD_SHARED_LIBS)
+  MESSAGE(STATUS "Shared libraries disabled")
   SET(LINK_SEARCH_START_STATIC TRUE)
-ENDIF(NOT BUILD_SHARED_LIBS)
+ELSE()
+  MESSAGE(STATUS "Shared libraries enabled")
+ENDIF()
 
 # Define here the needed parameters
-SET (ASSIMP_VERSION_MAJOR 3)
-SET (ASSIMP_VERSION_MINOR 3)
-SET (ASSIMP_VERSION_PATCH 1) # subversion revision?
+SET (ASSIMP_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+SET (ASSIMP_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+SET (ASSIMP_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 SET (ASSIMP_VERSION ${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}.${ASSIMP_VERSION_PATCH})
-SET (ASSIMP_SOVERSION 3)
-SET (PROJECT_VERSION "${ASSIMP_VERSION}")
+SET (ASSIMP_SOVERSION 5)
 
-SET(ASSIMP_PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
+SET( ASSIMP_PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources" )
+if(NOT ASSIMP_HUNTER_ENABLED)
+  # Enable C++11 support globally
+  set_property( GLOBAL PROPERTY CXX_STANDARD 11 )
+endif()
 
-# Needed for openddl_parser config, no use of c++11 at this moment
-add_definitions( -DOPENDDL_NO_USE_CPP11 )
-set_property( GLOBAL PROPERTY CXX_STANDARD 11 )
+IF(NOT ASSIMP_IGNORE_GIT_HASH)
+  # Get the current working branch
+  EXECUTE_PROCESS(
+    COMMAND git rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
 
-# Get the current working branch
-EXECUTE_PROCESS(
-  COMMAND git rev-parse --abbrev-ref HEAD
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_BRANCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  ERROR_QUIET
-)
-
-# Get the latest abbreviated commit hash of the working branch
-EXECUTE_PROCESS(
-  COMMAND git log -1 --format=%h
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_COMMIT_HASH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  ERROR_QUIET
-)
+  # Get the latest abbreviated commit hash of the working branch
+  EXECUTE_PROCESS(
+    COMMAND git rev-parse --short=8 HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
+ENDIF()
 
 IF(NOT GIT_COMMIT_HASH)
   SET(GIT_COMMIT_HASH 0)
-ENDIF(NOT GIT_COMMIT_HASH)
+ENDIF()
 
 IF(ASSIMP_DOUBLE_PRECISION)
-  ADD_DEFINITIONS(-DASSIMP_DOUBLE_PRECISION)
-ENDIF(ASSIMP_DOUBLE_PRECISION)
+    ADD_DEFINITIONS(-DASSIMP_DOUBLE_PRECISION)
+ENDIF()
 
-configure_file(
+CONFIGURE_FILE(
   ${CMAKE_CURRENT_LIST_DIR}/revision.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/revision.h
 )
 
-configure_file(
+CONFIGURE_FILE(
   ${CMAKE_CURRENT_LIST_DIR}/include/assimp/config.h.in
-  ${CMAKE_CURRENT_LIST_DIR}/include/assimp/config.h
+  ${CMAKE_CURRENT_BINARY_DIR}/include/assimp/config.h
 )
 
-include_directories(
-    ./
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}/include
+INCLUDE_DIRECTORIES( BEFORE
+  ./
+  code/
+  include
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
-SET(CMAKE_MODULE_PATH       "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules" )
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules" )
 SET(LIBASSIMP_COMPONENT     "libassimp${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}.${ASSIMP_VERSION_PATCH}" )
 SET(LIBASSIMP-DEV_COMPONENT "libassimp${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}.${ASSIMP_VERSION_PATCH}-dev" )
 SET(CPACK_COMPONENTS_ALL assimp-bin ${LIBASSIMP_COMPONENT} ${LIBASSIMP-DEV_COMPONENT} assimp-dev)
 SET(ASSIMP_LIBRARY_SUFFIX "" CACHE STRING "Suffix to append to library names")
 
-# Ensure that we do not run into issues like http://www.tcm.phy.cam.ac.uk/sw/inodes64.html on 32 bit linux
 IF( UNIX )
-  IF ( CMAKE_SIZEOF_VOID_P EQUAL 4) # only necessary for 32-bit linux
-    ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64 )
-  ENDIF()
+  # Use GNUInstallDirs for Unix predefined directories
+  INCLUDE(GNUInstallDirs)
 ENDIF()
 
-IF((CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX) AND NOT CMAKE_COMPILER_IS_MINGW)
-  IF (BUILD_SHARED_LIBS AND CMAKE_SIZEOF_VOID_P EQUAL 8) # -fPIC is only required for shared libs on 64 bit
-     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+# Grouped compiler settings ########################################
+IF ((CMAKE_C_COMPILER_ID MATCHES "GNU") AND NOT CMAKE_COMPILER_IS_MINGW)
+  IF(NOT ASSIMP_HUNTER_ENABLED)
+    SET(CMAKE_CXX_STANDARD 11)
+    SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
   ENDIF()
   # hide all not-exported symbols
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fvisibility=hidden -Wall -std=c++0x" )
+  SET(CMAKE_CXX_FLAGS "-fvisibility=hidden -fno-strict-aliasing -Wall ${CMAKE_CXX_FLAGS}")
+  SET(CMAKE_C_FLAGS "-fno-strict-aliasing ${CMAKE_C_FLAGS}")
+  SET(LIBSTDC++_LIBRARIES -lstdc++)
 ELSEIF(MSVC)
   # enable multi-core compilation with MSVC
-  add_compile_options(/MP)
-ELSEIF ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fvisibility=hidden -Wall -Wno-long-long -pedantic -std=c++11" )
+  ADD_COMPILE_OPTIONS(/MP /bigobj /W4 /WX ) 
+  # disable "elements of array '' will be default initialized" warning on MSVC2013
+  IF(MSVC12)
+    ADD_COMPILE_OPTIONS(/wd4351)
+  ENDIF()
+  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_DEBUG /Zi /Od")
+ELSEIF ( "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+  IF(NOT ASSIMP_HUNTER_ENABLED)
+    SET(CMAKE_CXX_STANDARD 11)
+    SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  ENDIF()
+  SET(CMAKE_CXX_FLAGS "-fvisibility=hidden -fno-strict-aliasing -Wall -Wno-long-long ${CMAKE_CXX_FLAGS}" )
+  SET(CMAKE_C_FLAGS "-fno-strict-aliasing ${CMAKE_C_FLAGS}")
 ELSEIF( CMAKE_COMPILER_IS_MINGW )
-  SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wall -Wno-long-long -pedantic -std=c++11" )
-  add_definitions( -U__STRICT_ANSI__ )
+  IF (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
+    message(FATAL_ERROR "MinGW is too old to be supported. Please update MinGW and try again.")
+  ELSEIF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.3)
+    message(WARNING "MinGW is old, if you experience errors, update MinGW.")
+  ENDIF()
+  IF(NOT ASSIMP_HUNTER_ENABLED)
+    SET(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+    SET(CMAKE_C_FLAGS "-fPIC ${CMAKE_C_FLAGS}")
+  ENDIF()
+  SET(CMAKE_CXX_FLAGS "-fvisibility=hidden -fno-strict-aliasing -Wall -Wno-long-long -Wa,-mbig-obj -O3 ${CMAKE_CXX_FLAGS}")
+  SET(CMAKE_C_FLAGS "-fno-strict-aliasing ${CMAKE_C_FLAGS}")
+  ADD_DEFINITIONS( -U__STRICT_ANSI__ )
 ENDIF()
 
-if (ASSIMP_COVERALLS)
-    include(Coveralls)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage")
-endif()
+IF ( IOS AND NOT ASSIMP_HUNTER_ENABLED)
+  IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode -Og")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode -Og")
+  ELSE()
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode -O3")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode -O3")
+    # Experimental for pdb generation
+  ENDIF()
+ENDIF()
 
-INCLUDE (FindPkgConfig)
-INCLUDE_DIRECTORIES( include )
+IF (ASSIMP_COVERALLS)
+  MESSAGE(STATUS "Coveralls enabled")
+  INCLUDE(Coveralls)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage")
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage")
+ENDIF()
 
+IF (ASSIMP_ERROR_MAX)
+  MESSAGE(STATUS "Turning on all warnings")
+  IF (MSVC)
+    ADD_COMPILE_OPTIONS(/W4) # NB: there is a /Wall option, pedantic mode
+  ELSE()
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+  ENDIF()
+ENDIF()
+
+IF (ASSIMP_ASAN)
+  MESSAGE(STATUS "AddressSanitizer enabled")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+ENDIF()
+
+IF (ASSIMP_UBSAN)
+  MESSAGE(STATUS "Undefined Behavior sanitizer enabled")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-sanitize-recover=all")
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-sanitize-recover=all")
+ENDIF()
+
+INCLUDE (FindPkgMacros)
 INCLUDE (PrecompiledHeader)
 
 # If this is an in-source build (CMAKE_SOURCE_DIR == CMAKE_BINARY_DIR),
@@ -195,20 +333,18 @@ INCLUDE (PrecompiledHeader)
 # source tree. During an out-of-source build, however, do not litter this
 # directory, since that is probably what the user wanted to avoid.
 IF ( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
-  SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/lib" )
+  SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin" )
   SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/lib" )
   SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin" )
-ENDIF ( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
+ELSE()
+  SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
+  SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+  SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+ENDIF ()
 
-# Cache these to allow the user to override them manually.
-SET( ASSIMP_LIB_INSTALL_DIR "lib" CACHE STRING
-  "Path the built library files are installed to." )
-SET( ASSIMP_INCLUDE_INSTALL_DIR "include" CACHE STRING
-  "Path the header files are installed to." )
-SET( ASSIMP_BIN_INSTALL_DIR "bin" CACHE STRING
-  "Path the tool executables are installed to." )
+get_cmake_property(is_multi_config GENERATOR_IS_MULTI_CONFIG)
 
-IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+IF (ASSIMP_INJECT_DEBUG_POSTFIX AND (is_multi_config OR CMAKE_BUILD_TYPE STREQUAL "Debug"))
   SET(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "Debug Postfix for lib, samples and tools")
 ELSE()
   SET(CMAKE_DEBUG_POSTFIX "" CACHE STRING "Debug Postfix for lib, samples and tools")
@@ -217,69 +353,184 @@ ENDIF()
 # Only generate this target if no higher-level project already has
 IF (NOT TARGET uninstall)
   # add make uninstall capability
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
-  add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
+  ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 ENDIF()
 
-# cmake configuration files
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/assimp-config.cmake.in"         "${CMAKE_CURRENT_BINARY_DIR}/assimp-config.cmake" @ONLY IMMEDIATE)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/assimp-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/assimp-config-version.cmake" @ONLY IMMEDIATE)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/assimp-config.cmake"             "${CMAKE_CURRENT_BINARY_DIR}/assimp-config-version.cmake" DESTINATION "${ASSIMP_LIB_INSTALL_DIR}/cmake/assimp-${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}" COMPONENT ${LIBASSIMP-DEV_COMPONENT})
+IF(ASSIMP_HUNTER_ENABLED)
+  set(CONFIG_INSTALL_DIR "lib/cmake/${PROJECT_NAME}")
+  set(INCLUDE_INSTALL_DIR "include")
 
-FIND_PACKAGE( DirectX )
+  set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-IF( CMAKE_COMPILER_IS_GNUCXX )
-  SET(LIBSTDC++_LIBRARIES -lstdc++)
-ENDIF( CMAKE_COMPILER_IS_GNUCXX )
+  # Configuration
+  set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+  set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+  set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+  set(NAMESPACE "${PROJECT_NAME}::")
+
+  # Include module with fuction 'write_basic_package_version_file'
+  include(CMakePackageConfigHelpers)
+
+  # Note: PROJECT_VERSION is used as a VERSION
+  write_basic_package_version_file("${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion)
+
+  # Use variables:
+  #   * TARGETS_EXPORT_NAME
+  #   * PROJECT_NAME
+  configure_package_config_file(
+      "cmake/assimp-hunter-config.cmake.in"
+      "${PROJECT_CONFIG}"
+      INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
+  )
+
+  install(
+      FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+      DESTINATION "${CONFIG_INSTALL_DIR}"
+  )
+
+  install(
+      EXPORT "${TARGETS_EXPORT_NAME}"
+      NAMESPACE "${NAMESPACE}"
+      DESTINATION "${CONFIG_INSTALL_DIR}"
+  )
+ELSE()
+  # cmake configuration files
+  if(${BUILD_SHARED_LIBS})
+    set(BUILD_LIB_TYPE SHARED)
+  else()
+    set(BUILD_LIB_TYPE STATIC)
+  endif()
+
+  IF( UNIX )
+    # Use GNUInstallDirs for Unix predefined directories
+    INCLUDE(GNUInstallDirs)
+
+    SET( ASSIMP_LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR})
+    SET( ASSIMP_INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+    SET( ASSIMP_BIN_INSTALL_DIR ${CMAKE_INSTALL_BINDIR})
+  ELSE()
+    # Cache these to allow the user to override them on non-Unix platforms
+    SET( ASSIMP_LIB_INSTALL_DIR "lib" CACHE STRING
+      "Path the built library files are installed to." )
+    SET( ASSIMP_INCLUDE_INSTALL_DIR "include" CACHE STRING
+      "Path the header files are installed to." )
+    SET( ASSIMP_BIN_INSTALL_DIR "bin" CACHE STRING
+      "Path the tool executables are installed to." )
+
+    SET(CMAKE_INSTALL_FULL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/${ASSIMP_INCLUDE_INSTALL_DIR})
+    SET(CMAKE_INSTALL_FULL_LIBDIR ${CMAKE_INSTALL_PREFIX}/${ASSIMP_LIB_INSTALL_DIR})
+    SET(CMAKE_INSTALL_FULL_BINDIR ${CMAKE_INSTALL_PREFIX}/${ASSIMP_BIN_INSTALL_DIR})
+  ENDIF()
+
+  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimp-config.cmake.in"         "${CMAKE_CURRENT_BINARY_DIR}/assimp-config.cmake" @ONLY IMMEDIATE)
+  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimpTargets.cmake.in"         "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets.cmake" @ONLY IMMEDIATE)
+  IF (is_multi_config)
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimpTargets-debug.cmake.in"   "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-debug.cmake" @ONLY IMMEDIATE)
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimpTargets-release.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-release.cmake" @ONLY IMMEDIATE)
+    SET(PACKAGE_TARGETS_FILE "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-debug.cmake" "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-release.cmake")
+  ELSEIF (CMAKE_BUILD_TYPE STREQUAL Debug)
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimpTargets-debug.cmake.in"   "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-debug.cmake" @ONLY IMMEDIATE)
+    SET(PACKAGE_TARGETS_FILE "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-debug.cmake")
+  ELSE()
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimpTargets-release.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-release.cmake" @ONLY IMMEDIATE)
+    SET(PACKAGE_TARGETS_FILE "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets-release.cmake")
+  ENDIF()
+  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/assimp-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/assimp-config-version.cmake" @ONLY IMMEDIATE)
+  #we should generated these scripts after CMake VERSION 3.0.2 using export(EXPORT ...) and write_basic_package_version_file(...)
+  INSTALL(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/assimp-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/assimp-config-version.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/assimpTargets.cmake"
+    ${PACKAGE_TARGETS_FILE}
+    DESTINATION "${ASSIMP_LIB_INSTALL_DIR}/cmake/assimp-${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}" COMPONENT ${LIBASSIMP-DEV_COMPONENT})
+ENDIF()
+
+IF( ASSIMP_BUILD_DOCS )
+  ADD_SUBDIRECTORY(doc)
+ENDIF()
+
+# Look for system installed irrXML
+IF ( ASSIMP_SYSTEM_IRRXML )
+  FIND_PACKAGE( IrrXML REQUIRED )
+ENDIF()
 
 # Search for external dependencies, and build them from source if not found
 # Search for zlib
-IF ( NOT ASSIMP_BUILD_ZLIB )
-    find_package(ZLIB)
-ENDIF( NOT ASSIMP_BUILD_ZLIB )
+IF(ASSIMP_HUNTER_ENABLED)
+  hunter_add_package(ZLIB)
+  find_package(ZLIB CONFIG REQUIRED)
 
-IF( NOT ZLIB_FOUND )
-  message(STATUS "compiling zlib from souces")
-  include(CheckIncludeFile)
-  include(CheckTypeSize)
-  include(CheckFunctionExists)
-  # compile from sources
-  add_subdirectory(contrib/zlib)
-  SET(ZLIB_FOUND 1)
-  SET(ZLIB_LIBRARIES zlibstatic)
-  SET(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/contrib/zlib ${CMAKE_CURRENT_BINARY_DIR}/contrib/zlib)
-else(NOT ZLIB_FOUND)
-  ADD_DEFINITIONS(-DASSIMP_BUILD_NO_OWN_ZLIB)
-  SET(ZLIB_LIBRARIES_LINKED -lz)
-ENDIF(NOT ZLIB_FOUND)
-INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
+  add_definitions(-DASSIMP_BUILD_NO_OWN_ZLIB)
+  set(ZLIB_FOUND TRUE)
+  set(ZLIB_LIBRARIES ZLIB::zlib)
+  set(ASSIMP_BUILD_MINIZIP TRUE)
+ELSE()
+  IF ( NOT ASSIMP_BUILD_ZLIB )
+    FIND_PACKAGE(ZLIB)
+  ENDIF()
 
-# Search for unzip
-IF (PKG_CONFIG_FOUND)
-  PKG_CHECK_MODULES(UNZIP minizip)
-ENDIF (PKG_CONFIG_FOUND)
+  IF( NOT ZLIB_FOUND )
+    MESSAGE(STATUS "compiling zlib from sources")
+    INCLUDE(CheckIncludeFile)
+    INCLUDE(CheckTypeSize)
+    INCLUDE(CheckFunctionExists)
+
+    # Explicitly turn off ASM686 and AMD64 cmake options.
+    # The AMD64 option causes a build failure on MSVC and the ASM builds seem to have problems:
+    #		https://github.com/madler/zlib/issues/41#issuecomment-125848075
+    # Also prevents these options from "polluting" the cmake options if assimp is being
+    # included as a submodule.
+    set( ASM686 FALSE CACHE INTERNAL "Override ZLIB flag to turn off assembly" FORCE )
+    set( AMD64 FALSE CACHE INTERNAL "Override ZLIB flag to turn off assembly" FORCE )
+
+    # compile from sources
+    ADD_SUBDIRECTORY(contrib/zlib)
+    SET(ZLIB_FOUND 1)
+    SET(ZLIB_LIBRARIES zlibstatic)
+    SET(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/contrib/zlib ${CMAKE_CURRENT_BINARY_DIR}/contrib/zlib)
+    # need to ensure we don't link with system zlib or minizip as well.
+    SET(ASSIMP_BUILD_MINIZIP 1)
+  ELSE()
+    ADD_DEFINITIONS(-DASSIMP_BUILD_NO_OWN_ZLIB)
+    SET(ZLIB_LIBRARIES_LINKED -lz)
+  ENDIF()
+  INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
+ENDIF()
+
+IF( NOT IOS )
+  IF( NOT ASSIMP_BUILD_MINIZIP )
+    use_pkgconfig(UNZIP minizip)
+  ENDIF()
+ELSE ()
+  IF( NOT BUILD_SHARED_LIBS )
+    IF( NOT ASSIMP_BUILD_MINIZIP )
+      use_pkgconfig(UNZIP minizip)
+    ENDIF()
+  ENDIF ()
+ENDIF ()
 
 IF ( ASSIMP_NO_EXPORT )
   ADD_DEFINITIONS( -DASSIMP_BUILD_NO_EXPORT)
   MESSAGE( STATUS "Build an import-only version of Assimp." )
-ENDIF( ASSIMP_NO_EXPORT )
+ENDIF()
 
 SET ( ASSIMP_BUILD_ARCHITECTURE "" CACHE STRING
   "describe the current architecture."
 )
-IF    ( ASSIMP_BUILD_ARCHITECTURE STREQUAL "")
-ELSE  ( ASSIMP_BUILD_ARCHITECTURE STREQUAL "")
+IF( ASSIMP_BUILD_ARCHITECTURE STREQUAL "")
+ELSE()
   ADD_DEFINITIONS ( -D'ASSIMP_BUILD_ARCHITECTURE="${ASSIMP_BUILD_ARCHITECTURE}"' )
-ENDIF ( ASSIMP_BUILD_ARCHITECTURE STREQUAL "")
+ENDIF()
 
 # ${CMAKE_GENERATOR}
 SET ( ASSIMP_BUILD_COMPILER "" CACHE STRING
   "describe the current compiler."
 )
-IF    ( ASSIMP_BUILD_COMPILER STREQUAL "")
-ELSE  ( ASSIMP_BUILD_COMPILER STREQUAL "")
+IF( ASSIMP_BUILD_COMPILER STREQUAL "")
+ELSE()
   ADD_DEFINITIONS ( -D'ASSIMP_BUILD_COMPILER="${ASSIMP_BUILD_COMPILER}"' )
-ENDIF ( ASSIMP_BUILD_COMPILER STREQUAL "")
+ENDIF()
 
 MARK_AS_ADVANCED ( ASSIMP_BUILD_ARCHITECTURE ASSIMP_BUILD_COMPILER )
 
@@ -292,7 +543,9 @@ IF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
     SET(C4D_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Melange/includes")
 
     # pick the correct prebuilt library
-    IF(MSVC14)
+    IF(MSVC15)
+      SET(C4D_LIB_POSTFIX "_2017")
+    ELSEIF(MSVC14)
       SET(C4D_LIB_POSTFIX "_2015")
     ELSEIF(MSVC12)
       SET(C4D_LIB_POSTFIX "_2013")
@@ -323,137 +576,141 @@ IF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
     MESSAGE( FATAL_ERROR
       "C4D is currently only available on Windows with melange SDK installed in contrib/Melange"
     )
-  ENDIF ( MSVC )
-ELSE (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
+  ENDIF ()
+ELSE ()
   ADD_DEFINITIONS( -DASSIMP_BUILD_NO_C4D_IMPORTER )
-ENDIF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
+ENDIF ()
+
+IF(NOT ASSIMP_HUNTER_ENABLED)
+  ADD_SUBDIRECTORY(contrib)
+ENDIF()
 
 ADD_SUBDIRECTORY( code/ )
 IF ( ASSIMP_BUILD_ASSIMP_TOOLS )
-  IF ( WIN32 AND DirectX_D3DX9_LIBRARY )
-    option ( ASSIMP_BUILD_ASSIMP_VIEW "If the Assimp view tool is built. (requires DirectX)" ${DirectX_FOUND} )
+  # The viewer for windows only
+  IF ( WIN32 )
+    OPTION ( ASSIMP_BUILD_ASSIMP_VIEW "If the Assimp view tool is built. (requires DirectX)" OFF )
     IF ( ASSIMP_BUILD_ASSIMP_VIEW )
       ADD_SUBDIRECTORY( tools/assimp_view/ )
-    ENDIF ( ASSIMP_BUILD_ASSIMP_VIEW )
-  ENDIF ( WIN32 )
-
+    ENDIF ()
+  ENDIF ()
+  # The command line tool
   ADD_SUBDIRECTORY( tools/assimp_cmd/ )
-
-  # Check dependencies for assimp_qt_viewer.
-  # Why here? Maybe user do not want Qt viewer and have no Qt.
-  # Why assimp_qt_viewer/CMakeLists.txt still contain similar check?
-  # Because viewer can be build independently of Assimp.
-  FIND_PACKAGE(Qt5Widgets QUIET)
-  FIND_PACKAGE(DevIL QUIET)
-  FIND_PACKAGE(OpenGL QUIET)
-  IF ( Qt5Widgets_FOUND AND IL_FOUND AND OPENGL_FOUND)
-    ADD_SUBDIRECTORY( tools/assimp_qt_viewer/ )
-  ELSE()
-    SET ( ASSIMP_QT_VIEWER_DEPENDENCIES "")
-    IF (NOT Qt5_FOUND)
-      SET ( ASSIMP_QT_VIEWER_DEPENDENCIES "${ASSIMP_QT_VIEWER_DEPENDENCIES} Qt5")
-    ENDIF (NOT Qt5_FOUND)
-
-    IF (NOT IL_FOUND)
-      SET ( ASSIMP_QT_VIEWER_DEPENDENCIES "${ASSIMP_QT_VIEWER_DEPENDENCIES} DevIL")
-    ENDIF (NOT IL_FOUND)
-
-    IF (NOT OPENGL_FOUND)
-      SET ( ASSIMP_QT_VIEWER_DEPENDENCIES "${ASSIMP_QT_VIEWER_DEPENDENCIES} OpengGL")
-    ENDIF (NOT OPENGL_FOUND)
-
-    MESSAGE (WARNING "Build of assimp_qt_viewer is disabled. Unsatisfied dendencies: ${ASSIMP_QT_VIEWER_DEPENDENCIES}")
-  ENDIF ( Qt5Widgets_FOUND AND IL_FOUND AND OPENGL_FOUND)
-ENDIF ( ASSIMP_BUILD_ASSIMP_TOOLS )
+ENDIF ()
 
 IF ( ASSIMP_BUILD_SAMPLES)
+  SET( SAMPLES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/samples )
+  SET( SAMPLES_SHARED_CODE_DIR ${SAMPLES_DIR}/SharedCode )
   IF ( WIN32 )
     ADD_SUBDIRECTORY( samples/SimpleTexturedOpenGL/ )
-  ENDIF ( WIN32 )
+    ADD_SUBDIRECTORY( samples/SimpleTexturedDirectx11 )
+  ENDIF ()
   ADD_SUBDIRECTORY( samples/SimpleOpenGL/ )
-ENDIF ( ASSIMP_BUILD_SAMPLES )
+ENDIF ()
 
 IF ( ASSIMP_BUILD_TESTS )
   ADD_SUBDIRECTORY( test/ )
-ENDIF ( ASSIMP_BUILD_TESTS )
+ENDIF ()
 
 # Generate a pkg-config .pc for the Assimp library.
 CONFIGURE_FILE( "${PROJECT_SOURCE_DIR}/assimp.pc.in" "${PROJECT_BINARY_DIR}/assimp.pc" @ONLY )
-INSTALL( FILES "${PROJECT_BINARY_DIR}/assimp.pc" DESTINATION ${ASSIMP_LIB_INSTALL_DIR}/pkgconfig/ COMPONENT ${LIBASSIMP-DEV_COMPONENT})
+IF ( ASSIMP_INSTALL )
+  INSTALL( FILES "${PROJECT_BINARY_DIR}/assimp.pc" DESTINATION ${ASSIMP_LIB_INSTALL_DIR}/pkgconfig/ COMPONENT ${LIBASSIMP-DEV_COMPONENT})
+ENDIF()
 
-IF(CMAKE_CPACK_COMMAND AND UNIX AND ASSIMP_OPT_BUILD_PACKAGES)
-  # Packing information
-  SET(CPACK_PACKAGE_NAME                    "assimp{ASSIMP_VERSION_MAJOR}")
-  SET(CPACK_PACKAGE_CONTACT "" CACHE STRING "Package maintainer and PGP signer.")
-  SET(CPACK_PACKAGE_VENDOR                  "https://github.com/assimp")
-  SET(CPACK_PACKAGE_DISPLAY_NAME            "Assimp ${ASSIMP_VERSION}")
-  SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY     " - Open Asset Import Library ${ASSIMP_VERSION}")
-  SET(CPACK_PACKAGE_VERSION                 "${ASSIMP_VERSION}.${ASSIMP_PACKAGE_VERSION}" )
-  SET(CPACK_PACKAGE_VERSION_MAJOR           "${ASSIMP_VERSION_MAJOR}")
-  SET(CPACK_PACKAGE_VERSION_MINOR           "${ASSIMP_VERSION_MINOR}")
-  SET(CPACK_PACKAGE_VERSION_PATCH           "${ASSIMP_VERSION_PATCH}")
-  SET(CPACK_PACKAGE_INSTALL_DIRECTORY       "assimp${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}")
-  SET(CPACK_RESOURCE_FILE_LICENSE           "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+IF ( ASSIMP_INSTALL )
+  IF(CMAKE_CPACK_COMMAND AND UNIX AND ASSIMP_OPT_BUILD_PACKAGES)
+    # Packing information
+    SET(CPACK_PACKAGE_NAME                    "assimp{ASSIMP_VERSION_MAJOR}.{ASSIMP_VERSION_MINOR}")
+    SET(CPACK_PACKAGE_CONTACT "" CACHE STRING "Package maintainer and PGP signer.")
+    SET(CPACK_PACKAGE_VENDOR                  "https://github.com/assimp")
+    SET(CPACK_PACKAGE_DISPLAY_NAME            "Assimp ${ASSIMP_VERSION}")
+    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY     " - Open Asset Import Library ${ASSIMP_VERSION}")
+    SET(CPACK_PACKAGE_VERSION                 "${ASSIMP_VERSION}.${ASSIMP_PACKAGE_VERSION}" )
+    SET(CPACK_PACKAGE_VERSION_MAJOR           "${ASSIMP_VERSION_MAJOR}")
+    SET(CPACK_PACKAGE_VERSION_MINOR           "${ASSIMP_VERSION_MINOR}")
+    SET(CPACK_PACKAGE_VERSION_PATCH           "${ASSIMP_VERSION_PATCH}")
+    SET(CPACK_PACKAGE_INSTALL_DIRECTORY       "assimp${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}")
+    SET(CPACK_RESOURCE_FILE_LICENSE           "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 
-  string(TOUPPER ${LIBASSIMP_COMPONENT}     "LIBASSIMP_COMPONENT_UPPER")
-  string(TOUPPER ${LIBASSIMP-DEV_COMPONENT} "LIBASSIMP-DEV_COMPONENT_UPPER")
+    STRING(TOUPPER ${LIBASSIMP_COMPONENT}     "LIBASSIMP_COMPONENT_UPPER")
+    STRING(TOUPPER ${LIBASSIMP-DEV_COMPONENT} "LIBASSIMP-DEV_COMPONENT_UPPER")
 
-  SET(CPACK_COMPONENT_ASSIMP-BIN_DISPLAY_NAME                       "tools")
-  SET(CPACK_COMPONENT_ASSIMP-BIN_DEPENDS                            "${LIBASSIMP_COMPONENT}" )
-  SET(CPACK_COMPONENT_${LIBASSIMP_COMPONENT_UPPER}_DISPLAY_NAME     "libraries")
-  SET(CPACK_COMPONENT_${LIBASSIMP-DEV_COMPONENT_UPPER}_DISPLAY_NAME "common headers and installs")
-  SET(CPACK_COMPONENT_${LIBASSIMP-DEV_COMPONENT_UPPER}_DEPENDS $    "{LIBASSIMP_COMPONENT}" )
-  SET(CPACK_COMPONENT_ASSIMP-DEV_DISPLAY_NAME                       "${CPACK_COMPONENT_${LIBASSIMP-DEV_COMPONENT}_DISPLAY_NAME}" )
-  SET(CPACK_COMPONENT_ASSIMP-DEV_DEPENDS                            "${LIBASSIMP-DEV_COMPONENT}" )
-  SET(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake zlib1g-dev pkg-config)
+    SET(CPACK_COMPONENT_ASSIMP-BIN_DISPLAY_NAME                       "tools")
+    SET(CPACK_COMPONENT_ASSIMP-BIN_DEPENDS                            "${LIBASSIMP_COMPONENT}" )
+    SET(CPACK_COMPONENT_${LIBASSIMP_COMPONENT_UPPER}_DISPLAY_NAME     "libraries")
+    SET(CPACK_COMPONENT_${LIBASSIMP-DEV_COMPONENT_UPPER}_DISPLAY_NAME "common headers and installs")
+    SET(CPACK_COMPONENT_${LIBASSIMP-DEV_COMPONENT_UPPER}_DEPENDS $    "{LIBASSIMP_COMPONENT}" )
+    SET(CPACK_COMPONENT_ASSIMP-DEV_DISPLAY_NAME                       "${CPACK_COMPONENT_${LIBASSIMP-DEV_COMPONENT}_DISPLAY_NAME}" )
+    SET(CPACK_COMPONENT_ASSIMP-DEV_DEPENDS                            "${LIBASSIMP-DEV_COMPONENT}" )
+    SET(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake zlib1g-dev pkg-config)
 
-  # debian
-  SET(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-  SET(CPACK_DEBIAN_CMAKE_OPTIONS    "-DBUILD_ASSIMP_SAMPLES:BOOL=${ASSIMP_BUILD_SAMPLES}")
-  SET(CPACK_DEBIAN_PACKAGE_SECTION  "libs" )
-  SET(CPACK_DEBIAN_PACKAGE_DEPENDS  "${CPACK_COMPONENTS_ALL}")
-  SET(CPACK_DEBIAN_PACKAGE_SUGGESTS)
-  SET(CPACK_DEBIAN_PACKAGE_NAME     "assimp")
-  SET(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES contrib/cppunit-1.12.1 contrib/cppunit_note.txt contrib/zlib workspaces test doc obj samples packaging)
-  SET(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
-  SET(CPACK_DEBIAN_CHANGELOG)
-  execute_process(COMMAND lsb_release -is
-    OUTPUT_VARIABLE _lsb_distribution OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE _lsb_release_failed)
-  SET(CPACK_DEBIAN_DISTRIBUTION_NAME ${_lsb_distribution} CACHE STRING "Name of the distrubiton")
-  STRING(TOLOWER ${CPACK_DEBIAN_DISTRIBUTION_NAME} CPACK_DEBIAN_DISTRIBUTION_NAME)
-  IF( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
-    SET(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid maverick natty oneiric precise CACHE STRING "Release code-names of the distrubiton release")
+    # debian
+    SET(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    SET(CPACK_DEBIAN_CMAKE_OPTIONS    "-DBUILD_ASSIMP_SAMPLES:BOOL=${ASSIMP_BUILD_SAMPLES}")
+    SET(CPACK_DEBIAN_PACKAGE_SECTION  "libs" )
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS  "${CPACK_COMPONENTS_ALL}")
+    SET(CPACK_DEBIAN_PACKAGE_SUGGESTS)
+    SET(cPACK_DEBIAN_PACKAGE_NAME     "assimp")
+    SET(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES contrib/gtest contrib/zlib workspaces test doc obj samples packaging)
+    SET(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
+    SET(CPACK_DEBIAN_CHANGELOG)
+    execute_process(COMMAND lsb_release -is
+      OUTPUT_VARIABLE _lsb_distribution OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _lsb_release_failed)
+    SET(CPACK_DEBIAN_DISTRIBUTION_NAME ${_lsb_distribution} CACHE STRING "Name of the distrubiton")
+    STRING(TOLOWER ${CPACK_DEBIAN_DISTRIBUTION_NAME} CPACK_DEBIAN_DISTRIBUTION_NAME)
+    IF( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
+      SET(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid maverick natty oneiric precise CACHE STRING "Release code-names of the distrubiton release")
+    ENDIF()
+    SET(DPUT_HOST "" CACHE STRING "PPA repository to upload the debian sources")
+    INCLUDE(CPack)
+    INCLUDE(DebSourcePPA)
   ENDIF()
-  SET(DPUT_HOST "" CACHE STRING "PPA repository to upload the debian sources")
-  include(CPack)
-  include(DebSourcePPA)
 ENDIF()
 
 if(WIN32)
-	if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-		SET(BIN_DIR "${PROJECT_SOURCE_DIR}/bin64/")
-		SET(LIB_DIR "${PROJECT_SOURCE_DIR}/lib64/")
-	elseif()
-		SET(BIN_DIR "${PROJECT_SOURCE_DIR}/bin32/")
-		SET(LIB_DIR "${PROJECT_SOURCE_DIR}/lib32/")
-	ENDIF()
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    SET(BIN_DIR "${PROJECT_SOURCE_DIR}/bin64/")
+    SET(LIB_DIR "${PROJECT_SOURCE_DIR}/lib64/")
+  else()
+    SET(BIN_DIR "${PROJECT_SOURCE_DIR}/bin32/")
+    SET(LIB_DIR "${PROJECT_SOURCE_DIR}/lib32/")
+  ENDIF()
 
-	if(MSVC12)
-		SET(ASSIMP_MSVC_VERSION "vc120")
-	elseif(MSVC14)
-		SET(ASSIMP_MSVC_VERSION "vc140")
-	ENDIF(MSVC12)
+  IF(MSVC_TOOLSET_VERSION)
+    set(MSVC_PREFIX "vc${MSVC_TOOLSET_VERSION}")
+  ELSE()
+    IF(MSVC12)
+      SET(ASSIMP_MSVC_VERSION "vc120")
+    ELSEIF(MSVC14)
+      SET(ASSIMP_MSVC_VERSION "vc140")
+    ELSEIF(MSVC15)
+      SET(ASSIMP_MSVC_VERSION "vc141")
+    ENDIF()
+  ENDIF()
 
-	if(MSVC12 OR MSVC14)
-		add_custom_target(UpdateAssimpLibsDebugSymbolsAndDLLs COMMENT "Copying Assimp Libraries ..." VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Release/assimp-${ASSIMP_MSVC_VERSION}-mt.dll	${BIN_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.dll VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Release/assimp-${ASSIMP_MSVC_VERSION}-mt.exp	${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.exp VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Release/assimp-${ASSIMP_MSVC_VERSION}-mt.lib	${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.lib VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.dll		${BIN_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.dll  VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.exp		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.exp VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.ilk		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.ilk VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.lib		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.lib VERBATIM)
-		add_custom_command(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb VERBATIM)
-	ENDIF(MSVC12 OR MSVC14)
-ENDIF (WIN32)
+  IF(MSVC12 OR MSVC14 OR MSVC15 )
+    ADD_CUSTOM_TARGET(UpdateAssimpLibsDebugSymbolsAndDLLs COMMENT "Copying Assimp Libraries ..." VERBATIM)
+    IF(CMAKE_GENERATOR MATCHES "^Visual Studio")
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Release/assimp-${ASSIMP_MSVC_VERSION}-mt.dll	${BIN_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.dll VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Release/assimp-${ASSIMP_MSVC_VERSION}-mt.exp	${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.exp VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Release/assimp-${ASSIMP_MSVC_VERSION}-mt.lib	${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.lib VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.dll		${BIN_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.dll  VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.exp		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.exp VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.ilk		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.ilk VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.lib		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.lib VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/Debug/assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb VERBATIM)
+    ELSE()
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mt.dll	${BIN_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.dll VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mt.exp	${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.exp VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mt.lib	${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mt.lib VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mtd.dll		${BIN_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.dll  VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mtd.exp		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.exp VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mtd.ilk		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.ilk VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mtd.lib		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.lib VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb VERBATIM)
+      ADD_CUSTOM_COMMAND(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/code/assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb		${LIB_DIR}assimp-${ASSIMP_MSVC_VERSION}-mtd.pdb VERBATIM)
+    ENDIF()
+  ENDIF()
+ENDIF ()

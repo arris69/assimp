@@ -1,7 +1,9 @@
 # Open Asset Import Library (assimp)
 # ----------------------------------------------------------------------
 #
-# Copyright (c) 2006-2016, assimp team
+# Copyright (c) 2006-2020, assimp team
+
+
 # All rights reserved.
 #
 # Redistribution and use of this software in source and binary forms,
@@ -35,115 +37,194 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #----------------------------------------------------------------------
-cmake_minimum_required( VERSION 2.6 )
-
-#INCLUDE( AddGTest )
+cmake_minimum_required( VERSION 3.0 )
 
 INCLUDE_DIRECTORIES(
-	../contrib/gtest/include
-	../contrib/gtest/
+	${Assimp_SOURCE_DIR}/contrib/gtest/include
+	${Assimp_SOURCE_DIR}/contrib/gtest/
+    ${Assimp_SOURCE_DIR}/test/unit
     ${Assimp_SOURCE_DIR}/include
     ${Assimp_SOURCE_DIR}/code
 )
+if (MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING")
+endif()
 
 # Add the temporary output directories to the library path to make sure the
 # Assimp library can be found, even if it is not installed system-wide yet.
 LINK_DIRECTORIES( ${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib )
 
-SOURCE_GROUP( unit FILES
-  unit/CCompilerTest.c
-)
-
-SET( TEST_SRCS
-  unit/AbstractImportExportBase.cpp
-  unit/TestIOSystem.h
-  unit/TestModelFactory.h
-  unit/utAnim.cpp
-  unit/AssimpAPITest.cpp
-  unit/utBatchLoader.cpp
-  unit/utBlenderIntermediate.cpp
-  unit/utBlendImportAreaLight.cpp
-  unit/utBlendImportMaterials.cpp
-  unit/utColladaExportCamera.cpp
-  unit/utColladaExportLight.cpp
-  unit/utDefaultIOStream.cpp
-  unit/utDXFImporterExporter.cpp
-  unit/utFastAtof.cpp
-  unit/utFBXImporterExporter.cpp
-  unit/utFindDegenerates.cpp
-  unit/utFindInvalidData.cpp
-  unit/utFixInfacingNormals.cpp
-  unit/utGenNormals.cpp
-  unit/utImporter.cpp
-  unit/utImproveCacheLocality.cpp
+SET( COMMON
+  unit/utSimd.cpp
   unit/utIOSystem.cpp
   unit/utIOStreamBuffer.cpp
   unit/utIssues.cpp
-  unit/utJoinVertices.cpp
-  unit/utLimitBoneWeights.cpp
-  unit/utMaterialSystem.cpp
-  unit/utMatrix3x3.cpp
-  unit/utMatrix4x4.cpp
+  unit/utAnim.cpp
+  unit/AssimpAPITest.cpp
+  unit/AssimpAPITest_aiMatrix3x3.cpp
+  unit/AssimpAPITest_aiMatrix4x4.cpp
+  unit/AssimpAPITest_aiQuaternion.cpp
+  unit/AssimpAPITest_aiVector2D.cpp
+  unit/AssimpAPITest_aiVector3D.cpp
+  unit/MathTest.cpp
+  unit/MathTest.h
+  unit/RandomNumberGeneration.h
+  unit/utBatchLoader.cpp
+  unit/utDefaultIOStream.cpp
+  unit/utFastAtof.cpp
   unit/utMetadata.cpp
   unit/SceneDiffer.h
   unit/SceneDiffer.cpp
-  unit/utSIBImporter.cpp
-  unit/utObjImportExport.cpp
-  unit/utPretransformVertices.cpp
-  unit/utRemoveComments.cpp
-  unit/utRemoveComponent.cpp
-  unit/utRemoveRedundantMaterials.cpp
-  unit/utScenePreprocessor.cpp
+  unit/UTLogStream.h
+  unit/AbstractImportExportBase.cpp
+  unit/TestIOSystem.h
+  unit/TestModelFactory.h
+  unit/utTypes.cpp
+  unit/utVersion.cpp
+  unit/utProfiler.cpp
   unit/utSharedPPData.cpp
   unit/utStringUtils.cpp
-  unit/utSMDImportExport.cpp
-  unit/utSortByPType.cpp
-  unit/utSplitLargeMeshes.cpp
-  unit/utTargetAnimation.cpp
-  unit/utTextureTransform.cpp
-  unit/utTriangulate.cpp
-  unit/utTypes.cpp
-  unit/utVertexTriangleAdjacency.cpp
-  unit/utVersion.cpp
-  unit/utXImporterExporter.cpp
+  unit/Common/uiScene.cpp
+  unit/Common/utLineSplitter.cpp
+  unit/Common/utSpatialSort.cpp
 )
 
-SOURCE_GROUP( tests FILES  ${TEST_SRCS} )
+SET( IMPORTERS
+  unit/ImportExport/Assxml/utAssxmlImportExport.cpp
+  unit/utLWSImportExport.cpp
+  unit/utLWOImportExport.cpp
+  unit/utSMDImportExport.cpp
+  unit/utglTFImportExport.cpp
+  unit/utglTF2ImportExport.cpp
+  unit/utHMPImportExport.cpp
+  unit/utIFCImportExport.cpp
+  unit/utFBXImporterExporter.cpp
+  unit/utImporter.cpp
+  unit/ImportExport/utExporter.cpp
+  unit/ut3DImportExport.cpp
+  unit/ut3DSImportExport.cpp
+  unit/utACImportExport.cpp
+  unit/utAMFImportExport.cpp
+  unit/utASEImportExport.cpp
+  unit/utD3MFImportExport.cpp
+  unit/utQ3DImportExport.cpp
+  unit/utSTLImportExport.cpp
+  unit/utXImporterExporter.cpp
+  unit/utX3DImportExport.cpp
+  unit/utDXFImporterExporter.cpp
+  unit/utPMXImporter.cpp
+  unit/utPLYImportExport.cpp
+  unit/utObjImportExport.cpp
+  unit/utObjTools.cpp
+  unit/utOpenGEXImportExport.cpp
+  unit/utSIBImporter.cpp
+  unit/utBlenderIntermediate.cpp
+  unit/utBlendImportAreaLight.cpp
+  unit/utBlenderImportExport.cpp
+  unit/utBlendImportMaterials.cpp
+  unit/utBlenderWork.cpp
+  unit/utBVHImportExport.cpp
+  unit/utColladaExport.cpp
+  unit/utColladaImportExport.cpp
+  unit/utCSMImportExport.cpp
+  unit/utB3DImportExport.cpp
+  unit/utM3DImportExport.cpp
+  unit/utMDCImportExport.cpp
+  unit/utAssbinImportExport.cpp
+  unit/ImportExport/utAssjsonImportExport.cpp
+  unit/ImportExport/utCOBImportExport.cpp
+  unit/ImportExport/utOgreImportExport.cpp
+  unit/ImportExport/utQ3BSPFileImportExport.cpp
+  unit/ImportExport/utOFFImportExport.cpp
+  unit/ImportExport/utNFFImportExport.cpp
+  unit/ImportExport/utXGLImportExport.cpp
+  unit/ImportExport/utMD2Importer.cpp
+  unit/ImportExport/utMD3Importer.cpp
+  unit/ImportExport/utMD5Importer.cpp
+  unit/ImportExport/utMDLImporter.cpp
+  unit/ImportExport/MDL/MDLHL1TestFiles.h
+  unit/ImportExport/MDL/utMDLImporter_HL1_ImportSettings.cpp
+  unit/ImportExport/MDL/utMDLImporter_HL1_Materials.cpp
+  unit/ImportExport/MDL/utMDLImporter_HL1_Nodes.cpp
+  #unit/ImportExport/IRR/utIrrImportExport.cpp
+  unit/ImportExport/RAW/utRAWImportExport.cpp
+  unit/ImportExport/Terragen/utTerragenImportExport.cpp
+)
+
+SET( MATERIAL
+  unit/utMaterialSystem.cpp
+)
+
+SET( MATH
+  unit/utMatrix3x3.cpp
+  unit/utMatrix4x4.cpp
+  unit/utVector3.cpp
+)
+
+SET( POST_PROCESSES
+  unit/utImproveCacheLocality.cpp
+  unit/utFixInfacingNormals.cpp
+  unit/utGenNormals.cpp
+  unit/utTriangulate.cpp
+  unit/utTextureTransform.cpp
+  unit/utRemoveRedundantMaterials.cpp
+  unit/utRemoveVCProcess.cpp
+  unit/utScaleProcess.cpp
+  unit/utArmaturePopulate.cpp
+  unit/utJoinVertices.cpp
+  unit/utRemoveComments.cpp
+  unit/utRemoveComponent.cpp
+  unit/utVertexTriangleAdjacency.cpp
+  unit/utJoinVertices.cpp
+  unit/utSplitLargeMeshes.cpp
+  unit/utFindDegenerates.cpp
+  unit/utFindInvalidData.cpp
+  unit/utLimitBoneWeights.cpp
+  unit/utPretransformVertices.cpp
+  unit/utScenePreprocessor.cpp
+  unit/utTargetAnimation.cpp
+  unit/utSortByPType.cpp
+  unit/utSceneCombiner.cpp
+  unit/utGenBoundingBoxesProcess.cpp
+)
+
+SOURCE_GROUP( UnitTests\\Compiler     FILES  unit/CCompilerTest.c )
+SOURCE_GROUP( UnitTests\\Common       FILES  ${COMMON} )
+SOURCE_GROUP( UnitTests\\ImportExport FILES  ${IMPORTERS} )
+SOURCE_GROUP( UnitTests\\Material     FILES  ${MATERIAL} )
+SOURCE_GROUP( UnitTests\\Math         FILES  ${MATH} )
+SOURCE_GROUP( UnitTests\\PostProcess  FILES  ${POST_PROCESSES})
 
 add_executable( unit
     ../contrib/gtest/src/gtest-all.cc
     unit/CCompilerTest.c
     unit/Main.cpp
-    ../code/Version.cpp
-    ${TEST_SRCS}
+    ../code/Common/Version.cpp
+	${COMMON}
+	${IMPORTERS}
+	${MATERIAL}
+	${MATH}
+    ${POST_PROCESSES}
 )
 
 add_definitions(-DASSIMP_TEST_MODELS_DIR="${CMAKE_CURRENT_LIST_DIR}/models")
-    
+add_definitions(-DASSIMP_TEST_MODELS_NONBSD_DIR="${CMAKE_CURRENT_LIST_DIR}/models-nonbsd")
+
 SET_PROPERTY( TARGET assimp PROPERTY DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX} )
 
 IF( WIN32 )
     SET( platform_libs )
-ELSE( WIN32 )
+ELSE()
     SET( platform_libs pthread )
-ENDIF( WIN32 )
+ENDIF()
 
 IF(MSVC)
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-ENDIF(MSVC)
+ENDIF()
 
 target_link_libraries( unit assimp ${platform_libs} )
 
 add_subdirectory(headercheck)
-#if (ASSIMP_COVERALLS)
-#    include(Coveralls)
-#
-#    set(COVERAGE_SRCS ${assimp_src} ${TEST_SRCS} )
-#
-#    # Create the coveralls target.
-#    coveralls_setup(
-#        "${COVERAGE_SRCS}" # The source files.
-#        ON                 # If we should upload.
-#        "${PROJECT_SOURCE_DIR}/cmake-modules/") # (Optional) Alternate project cmake module path.
-#endif()
+
+add_test( unittests unit )
 

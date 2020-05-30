@@ -3,7 +3,9 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2016, assimp team
+Copyright (c) 2006-2020, assimp team
+
+
 
 All rights reserved.
 
@@ -39,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 */
 #include "UnitTestPCH.h"
-#include "Importer.h"
+#include "Common/Importer.h"
 #include "TestIOSystem.h"
 
 using namespace ::Assimp;
@@ -65,6 +67,7 @@ TEST_F( BatchLoaderTest, createTest ) {
     } catch ( ... ) {
         ok = false;
     }
+    EXPECT_TRUE( ok );
 }
 
 TEST_F( BatchLoaderTest, validateAccessTest ) {

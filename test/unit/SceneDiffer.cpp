@@ -3,7 +3,9 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2016, assimp team
+Copyright (c) 2006-2020, assimp team
+
+
 
 All rights reserved.
 
@@ -86,10 +88,8 @@ bool SceneDiffer::isEqual( const aiScene *expected, const aiScene *toCompare ) {
         }
     }
 
-    // ToDo!
-    return true;
     // materials
-    if ( expected->mNumMaterials != toCompare->mNumMaterials ) {
+    /*if ( expected->mNumMaterials != toCompare->mNumMaterials ) {
         std::stringstream stream;
         stream << "Number of materials not equal ( expected: " << expected->mNumMaterials << ", found : " << toCompare->mNumMaterials << " )\n";
         addDiff( stream.str() );
@@ -110,8 +110,9 @@ bool SceneDiffer::isEqual( const aiScene *expected, const aiScene *toCompare ) {
             std::stringstream stream;
             stream << "Materials are not equal, index : " << i << "\n";
             addDiff( stream.str() );
+            return false;
         }
-    }
+    }*/
 
     return true;
 }
@@ -121,7 +122,7 @@ void SceneDiffer::showReport() {
         return;
     }
 
-    for ( std::vector<std::string>::iterator it = m_diffs.begin(); it != m_diffs.end(); it++ ) {
+    for ( std::vector<std::string>::iterator it = m_diffs.begin(); it != m_diffs.end(); ++it ) {
         std::cout << *it << "\n";
     }
 
@@ -145,11 +146,11 @@ static std::string dumpVector3( const aiVector3D &toDump ) {
     return stream.str();
 }
 
-static std::string dumpColor4D( const aiColor4D &toDump ) {
+/*static std::string dumpColor4D( const aiColor4D &toDump ) {
     std::stringstream stream;
     stream << "( " << toDump.r << ", " << toDump.g << ", " << toDump.b << ", " << toDump.a << ")";
     return stream.str();
-}
+}*/
 
 static std::string dumpFace( const aiFace &face ) {
     std::stringstream stream;
@@ -218,8 +219,8 @@ bool SceneDiffer::compareMesh( aiMesh *expected, aiMesh *toCompare ) {
     //    return true;
 
         //ToDo!
-    bool normalEqual( true );
-    /*    for ( unsigned int i = 0; i < expected->mNumVertices; i++ ) {
+    /*bool normalEqual( true );
+        for ( unsigned int i = 0; i < expected->mNumVertices; i++ ) {
             aiVector3D &expNormal( expected->mNormals[ i ] );
             aiVector3D &toCompNormal( toCompare->mNormals[ i ] );
             if ( expNormal.Equal( toCompNormal ) ) {
