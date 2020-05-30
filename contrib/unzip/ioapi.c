@@ -10,14 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#	ifdef ASSIMP_BUILD_NO_OWN_ZLIB
-#		include <zlib.h>
-#	else
-#		include "../zlib/zlib.h"
-#	endif
+#include "zlib.h"
 #include "ioapi.h"
 
-
+#ifdef _WIN32
+#    pragma warning(push)
+#    pragma warning(disable : 4131 4100)
+#endif // _WIN32
 
 /* I've found an old Unix (a SunOS 4.1.3_U1) without all SEEK_* defined.... */
 
@@ -33,40 +32,40 @@
 #define SEEK_SET    0
 #endif
 
-voidpf ZCALLBACK fopen_file_func (
+voidpf ZCALLBACK fopen_file_func OF((
    voidpf opaque,
    const char* filename,
-   int mode);
+   int mode));
 
-uLong ZCALLBACK fread_file_func (
+uLong ZCALLBACK fread_file_func OF((
    voidpf opaque,
    voidpf stream,
    void* buf,
-   uLong size);
+   uLong size));
 
-uLong ZCALLBACK fwrite_file_func (
+uLong ZCALLBACK fwrite_file_func OF((
    voidpf opaque,
    voidpf stream,
    const void* buf,
-   uLong size);
+   uLong size));
 
-long ZCALLBACK ftell_file_func (
+long ZCALLBACK ftell_file_func OF((
    voidpf opaque,
-   voidpf stream);
+   voidpf stream));
 
-long ZCALLBACK fseek_file_func (
+long ZCALLBACK fseek_file_func OF((
    voidpf opaque,
    voidpf stream,
    uLong offset,
-   int origin);
+   int origin));
 
-int ZCALLBACK fclose_file_func (
+int ZCALLBACK fclose_file_func OF((
    voidpf opaque,
-   voidpf stream);
+   voidpf stream));
 
-int ZCALLBACK ferror_file_func (
+int ZCALLBACK ferror_file_func OF((
    voidpf opaque,
-   voidpf stream);
+   voidpf stream));
 
 
 voidpf ZCALLBACK fopen_file_func (opaque, filename, mode)
@@ -179,3 +178,7 @@ void fill_fopen_filefunc (pzlib_filefunc_def)
     pzlib_filefunc_def->zerror_file = ferror_file_func;
     pzlib_filefunc_def->opaque = NULL;
 }
+
+#ifdef _WIN32
+#    pragma warning(pop)
+#endif // _WIN32

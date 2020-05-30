@@ -5,7 +5,7 @@
 # Open Asset Import Library (ASSIMP)
 # ---------------------------------------------------------------------------
 #
-# Copyright (c) 2006-2010, ASSIMP Development Team
+# Copyright (c) 2006-2020, ASSIMP Development Team
 #
 # All rights reserved.
 #
@@ -60,9 +60,9 @@ files_to_ignore = ["pond.0.ply"]
 # File extensions are case insensitive
 # -------------------------------------------------------------------------------
 exclude_extensions = [
-    ".lws", ".assbin", ".assxml", ".txt", ".md",
+    ".assbin", ".assxml", ".txt", ".md",
     ".jpeg", ".jpg", ".png", ".gif", ".tga", ".bmp",
-    ".skeleton", ".skeleton.xml", ".license"
+    ".skeleton", ".skeleton.xml", ".license", ".mtl", ".material", ".pk3"
 ]
 
 # -------------------------------------------------------------------------------

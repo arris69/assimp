@@ -5,7 +5,7 @@
 # Open Asset Import Library (ASSIMP)
 # ---------------------------------------------------------------------------
 #
-# Copyright (c) 2006-2010, ASSIMP Development Team
+# Copyright (c) 2006-2020, ASSIMP Development Team
 #
 # All rights reserved.
 #
@@ -50,15 +50,13 @@ def hashing(file,pp):
     needs to be persistent across different python implementations
     and platforms, so we implement the hashing manually.
     """
-
+    file = file.lower()
     file = file.replace('\\','/')+":"+pp
     # SDBM hash
     res = 0
     for t in file:
         res = (ord(t) + (res<<6) + (res<<16) - res) % 2**32
-
-    # Python 2.7 normalization: strip 'L' suffix.
-    return hex(res).rstrip('L')
+    return '{:x}'.format(res)
 
 
  # vim: ai ts=4 sts=4 et sw=4
